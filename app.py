@@ -18,8 +18,6 @@ utils.init_db()
 cookies = utils.get_cookie_manager()
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
-
-# This is a key change for the component to initialize.
 if not cookies.ready():
     st.stop()
 
@@ -27,7 +25,6 @@ if not cookies.ready():
 user_session = cookies.get('compario_session')
 if user_session and not st.session_state.logged_in:
     st.session_state.logged_in = True
-    # CORRECTED: The cookie now directly stores the email string
     st.session_state.email = user_session
     st.switch_page("pages/dashboard.py")
 

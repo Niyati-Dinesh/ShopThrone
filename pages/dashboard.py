@@ -1,7 +1,7 @@
 import streamlit as st
 import utils
 from PIL import Image
-
+import recogonition 
 # --- Page Configuration ---
 st.set_page_config(
     page_title="Compario - Dashboard",
@@ -21,7 +21,7 @@ if not utils.is_logged_in(cookies):
     st.page_link("pages/signin.py", label="Go to Sign In")
     st.stop()
 
-st.session_state.name = utils.get_user_name(st.session_state.email)
+st.session_state.name = utils.get_user_info(cookies.get("compario_session"))[0]
 
 # --- Navigation Bar ---
 st.markdown(f"""
@@ -94,29 +94,19 @@ with col1:
     )
 
     if uploaded_file is not None:
-        try:
-            image = Image.open(uploaded_file)
-            
-            # Display uploaded image with custom styling
-            st.markdown('<div class="uploaded-image">', unsafe_allow_html=True)
-            st.image(image, caption="Image uploaded successfully!", width=150)
-            st.markdown('</div>', unsafe_allow_html=True)
-            if utils.save_image(uploaded_file, st.session_state.email):
-                st.success("🎉 Great! Your image has been uploaded successfully.")
-            
-            # Analysis button
-            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-            with col_btn2:
-                if st.button("🔍Identify Product", type="primary", use_container_width=True):
-                    with st.spinner("🤖 Analyzing image..."):
-                        import time
-                        time.sleep(3)  # Simulate processing time
-                        prediction = utils.analyze_image(uploaded_file)
-                        for pred in prediction:
-                            st.success(f"✅ Detected: {pred['label']} with confidence {pred['score']:.2f}")
+   
+        st.image(uploaded_file, caption="Your uploaded image.", width=250)
+        if st.button("Analyze Image", type="primary", use_container_width=True):
+            try:
+                if utils.save_image(uploaded_file, cookies.get('compario_session')):
+                    st.success("🎉 Image saved to your history.")
+                with st.spinner("🤖 Analyzing image..."):
+                   
+                    prediction = utils.analyze_image(uploaded_file)
+                    st.write("### Analysis Results:")
+                    for pred in prediction:
+                        st.success(f"✅ Detected: {pred['label']} with confidence {round(pred['score']*100,2)}%")
 
-        except Exception as e:
-            st.error(f"❌ Error processing image: {e}")
-
-    
+            except Exception as e:
+                st.error(f"❌ Error processing image: {e}")
 

@@ -2,13 +2,13 @@ import streamlit as st
 import re
 import psycopg2 as sql
 import hashlib
-import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
 from psycopg2 import Binary
 from PIL import Image
-from transformers import ViTForImageClassification, ViTImageProcessor
-from datasets import load_dataset #pip
+
+
 from transformers import pipeline
+
 # --- DATABASE AND HASHING FUNCTIONS ---
 
 def get_db_connection():
@@ -53,10 +53,32 @@ def init_db():
                 email VARCHAR(100) UNIQUE,
                 phone VARCHAR(15),
                 address TEXT,
+                age INTEGER,
+                gender VARCHAR(20),
                 password TEXT,
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        
+        # Add columns if they don't exist (for existing databases)
+        try:
+            cur.execute("""
+                ALTER TABLE users 
+                ADD COLUMN IF NOT EXISTS age INTEGER,
+                ADD COLUMN IF NOT EXISTS gender VARCHAR(20)
+            """)
+        except Exception as e:
+            print(f"Columns might already exist: {e}")
+        
+        cur.execute("""
+                    CREATE TABLE IF NOT EXISTS user_images (
+                    id SERIAL PRIMARY KEY,
+                    uid INTEGER NOT NULL REFERENCES users(id),
+                    image BYTEA NOT NULL,
+                    date_uploaded TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                )
+                    
+                    """)
         con.commit()
         cur.close()
         con.close()
@@ -74,8 +96,8 @@ def save_user_data(data):
     hashed_password = hash_password(data['password'])
     try:
         cur.execute(
-            "INSERT INTO users(name, email, phone, address, password) VALUES (%s, %s, %s, %s, %s)",
-            (data['name'], data['email'], data['phone'], data['address'], hashed_password)
+            "INSERT INTO users(name, email, phone, address, age, gender, password) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (data['name'], data['email'], data['phone'], data['address'], data.get('age'), data.get('gender'), hashed_password)
         )
         con.commit()
         return True
@@ -99,14 +121,14 @@ def check_user_data(email, password):
     con.close()
     return result is not None
 
-def get_user_name(email):
+def get_user_info(email):
     con = get_db_connection()
     cursor = con.cursor()
-    cursor.execute("SELECT name FROM users WHERE email = %s", (email,))
+    cursor.execute("SELECT name, email, phone, address, age, gender FROM users WHERE email = %s", (email,))
     result = cursor.fetchone()
     cursor.close()
     con.close()
-    return result[0] if result else ''
+    return result if result else ''
 
 
 # --- INPUT VALIDATION FUNCTIONS ---
@@ -135,6 +157,20 @@ def validate_phone(phone):
 
 def validate_name(name):
     return len(name.strip()) >= 2 and all(c.isalpha() or c.isspace() for c in name)
+
+def validate_age(age):
+    """Validates age is between 1 and 120."""
+    try:
+        age_int = int(age)
+        return 1 <= age_int <= 120
+    except (ValueError, TypeError):
+        return False
+
+def validate_gender(gender):
+    """Validates gender selection."""
+    valid_genders = ['Male', 'Female', 'Other', 'Prefer not to say']
+    return gender in valid_genders
+
 
 # ------------ SESSION FUNCTIONS ---
 
@@ -184,52 +220,66 @@ def logout(cookies):
 
 
 #---------------------CLASSIFICATIONS---------------------
-def save_image(image, email):
-    """Saves the uploaded image to the database, linked to a user by email."""
-    
-    
+def save_image(file, email):
+    """Saves an uploaded image file for a given user."""
     con = get_db_connection()
-    cursor = con.cursor()
+    if not con:
+        return
 
-    # Create table if it doesn't exist
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS images (
-            id SERIAL PRIMARY KEY,
-            uid INTEGER REFERENCES users(id),
-            image BYTEA,
-            date_uploaded TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+    try:
+        cursor = con.cursor()
+        
+        file.seek(0)
+        img_bytes = file.read()
+        cursor.execute("""
+            INSERT INTO user_images (uid, image)
+            VALUES ((SELECT id FROM users WHERE email=%s), %s)
+        """, (email, sql.Binary(img_bytes)))
+        
+        con.commit()
+    except sql.Error as e:
+        st.error(f"Database error saving image: {e}")
+        con.rollback()
+    finally:
+        if con:
+            con.close()
 
-    # Get user ID from email
-    cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
-    user = cursor.fetchone()
-    if not user:
-        cursor.close()
-        con.close()
-        return False  # No user found
-
-    uid = user[0]
-
-    # Read file as bytes
-    image_bytes = image.read()
-
-    # Insert into table
-    cursor.execute(
-        "INSERT INTO images (uid, image) VALUES (%s, %s)",
-        (uid, Binary(image_bytes))
-    )
-
-    con.commit()
-    cursor.close()
-    con.close()
-    return True
-
-
-def analyze_image(image):
-    clf=pipeline("image-classification", model="google/vit-base-patch16-224")
-    if image is not None:
-        image=Image.open(image)
-        preds=clf(image)
-        return preds
+def get_user_images(email, limit=5):
+    """Fetches the most recent images for a user."""
+    con = get_db_connection()
+    if not con:
+        return []
     
+    try:
+        cursor = con.cursor()
+        cursor.execute("""
+            SELECT image FROM user_images 
+            WHERE uid = (SELECT id FROM users WHERE email = %s)
+            ORDER BY date_uploaded DESC
+            LIMIT %s
+        """, (email, limit))
+        rows = cursor.fetchall()
+        
+        # DEBUG
+        if rows:
+            for idx, row in enumerate(rows):
+                print(f"Row {idx}: type={type(row[0])}, len={len(row[0]) if row[0] else 0}")
+                if row[0]:
+                    print(f"First 20 bytes: {row[0][:20]}")
+        
+        return [bytes(r[0]) for r in rows] if rows else []
+    
+    except sql.Error as e:
+        st.error(f"Database error fetching images: {e}")
+        return []
+    finally:
+        if con:
+            con.close()
+
+clf = pipeline("image-classification", model="google/vit-base-patch16-224")
+
+def analyze_image(image_path):
+    if image_path is not None:
+        image = Image.open(image_path).convert("RGB")
+        preds = clf(image, top_k=3)   # get top 3 predictions
+        return preds

@@ -6,7 +6,7 @@ import time
 st.set_page_config(
     page_title="Compario - Sign In",
     page_icon="logo.jpg",
-    layout="wide",
+    
 )
 
 
@@ -17,8 +17,6 @@ utils.load_css()
 cookies = utils.get_cookie_manager()
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
-
-# This is a key change for the component to initialize.
 if not cookies.ready():
     st.stop()
 
@@ -26,18 +24,18 @@ if not cookies.ready():
 user_session = cookies.get('compario_session')
 if user_session and not st.session_state.logged_in:
     st.session_state.logged_in = True
-    # CORRECTED: The cookie now directly stores the email string
     st.session_state.email = user_session
     st.switch_page("pages/dashboard.py")
 
 
 # --- Page Content ---
-st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+
 st.markdown("""
+            <div class="auth-container">
 <div class="auth-header">
     <h2 class="auth-title">Sign In</h2>
     <p class="auth-subtitle">Welcome back! Please sign in to your account.</p>
-</div>
+</div></div>
 """, unsafe_allow_html=True)
 
 with st.form("signin_form"):
@@ -55,9 +53,7 @@ with st.form("signin_form"):
             if utils.check_user_data(email, password):
                 st.session_state.logged_in = True
                 st.session_state.email = email
-                st.session_state.name = utils.get_user_name(email)
-                # CORRECTED WAY TO SET THE COOKIE
-                # The library doesn't support expiration dates directly in this call,
+                st.session_state.name = utils.get_user_info(email)[0]
                 # but it will set a session cookie.
                 cookies['compario_session'] = email
                 

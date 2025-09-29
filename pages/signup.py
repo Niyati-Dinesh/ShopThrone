@@ -6,7 +6,7 @@ import time
 st.set_page_config(
     page_title="Compario - Sign Up",
     page_icon="logo.jpg",
-    layout="wide",
+    
 )
 
 
@@ -17,7 +17,6 @@ cookies = utils.get_cookie_manager()
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
-# This is a key change for the component to initialize.
 if not cookies.ready():
     st.stop()
 
@@ -25,17 +24,17 @@ if not cookies.ready():
 user_session = cookies.get('compario_session')
 if user_session and not st.session_state.logged_in:
     st.session_state.logged_in = True
-    # CORRECTED: The cookie now directly stores the email string
     st.session_state.email = user_session
     st.switch_page("pages/dashboard.py")
 
 # --- Page Content ---
-st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+
 st.markdown("""
+            <div class="auth-container">
 <div class="auth-header">
     <h2 class="auth-title">Create Account</h2>
     <p class="auth-subtitle">Join thousands of smart shoppers today!</p>
-</div>
+</div></div>
 """, unsafe_allow_html=True)
 
 with st.form("signup_form"):
@@ -43,6 +42,12 @@ with st.form("signup_form"):
     email = st.text_input("Email Address", placeholder="Enter your email")
     phone = st.text_input("Phone Number", placeholder="Enter 10-digit phone number")
     address = st.text_area("Shipping Address", placeholder="Enter your shipping address")
+    col1, col2 = st.columns(2)
+    with col1:
+        age = st.number_input("Age", min_value=1, max_value=120, value=None, placeholder="Enter your age")
+    with col2:
+        gender = st.selectbox("Gender", options=["", "Male", "Female", "Other", "Prefer not to say"], index=0)
+    
     password = st.text_input("Password", type="password", placeholder="Create a strong password")
     confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm your password")
 
@@ -72,6 +77,10 @@ with st.form("signup_form"):
             errors.append("Please enter a valid email address.")
         if not utils.validate_phone(phone):
             errors.append("Please enter a valid 10-digit phone number.")
+        if age is None or not utils.validate_age(age):
+            errors.append("Please enter a valid age between 1 and 120.")
+        if not gender or not utils.validate_gender(gender):
+            errors.append("Please select a gender.")
         if password != confirm_password:
             errors.append("Passwords do not match.")
         if not utils.is_password_valid(password):
@@ -84,15 +93,18 @@ with st.form("signup_form"):
                 st.markdown(f'<p class="error-message">{error}</p>', unsafe_allow_html=True)
         else:
             user_data = {
-                'name': name, 'email': email, 'phone': phone,
-                'address': address, 'password': password
+                'name': name, 
+                'email': email, 
+                'phone': phone,
+                'address': address,
+                'age': age,
+                'gender': gender,
+                'password': password
             }
             if utils.save_user_data(user_data):
                 st.markdown('<p class="success-message">Account created successfully! Please sign in.</p>', unsafe_allow_html=True)
                 time.sleep(2)
                 st.switch_page("pages/signin.py")
-            # Error for existing email is handled in save_user_data()
-
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("Already have an account?")
 if st.button("Sign In", use_container_width=True):
