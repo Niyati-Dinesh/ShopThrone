@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+psycopg2-binary
+python-dotenv
+passlib[bcrypt]
+python-jose[cryptography]
+pydantic[email]
+sqlalchemy
+requests
+beautifulsoup4
+lxml
+regex
+selenium
+webdriver-manager
+transformers
+torch
+Pillow
