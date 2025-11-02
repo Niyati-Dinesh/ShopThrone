@@ -33,14 +33,18 @@ export default function Profile() {
       setLoading(true);
 
       // Fetch user details from your backend
-      // Note: You'll need to create these endpoints in your FastAPI
       const userResponse = await api.get("/users/me");
-
       setUserDetails(userResponse.data);
 
       // Fetch user's search history
       const historyResponse = await api.get("/users/my-searches");
-      setSearchHistory(historyResponse.data);
+      
+      // Sort searches by date - most recent first
+      const sortedHistory = historyResponse.data.sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      
+      setSearchHistory(sortedHistory);
     } catch (error) {
       console.error("Error fetching profile data:", error);
       setUserDetails(null);
@@ -83,6 +87,11 @@ export default function Profile() {
       }
       return total;
     }, 0);
+  };
+
+  // Get recent searches (first 5 for quick stats)
+  const getRecentSearches = () => {
+    return searchHistory.slice(0, 5);
   };
 
   if (loading) {
@@ -183,7 +192,7 @@ export default function Profile() {
 
               {/* Quick Stats */}
               <div className="mt-8 p-4 bg-stone-50 rounded-xl border border-stone-200">
-                <div className="text-center">
+                <div className="text-center mb-4">
                   <p className="text-2xl font-serif text-stone-800 mb-1">
                     {searchHistory.length}
                   </p>
@@ -191,6 +200,22 @@ export default function Profile() {
                     Total Searches
                   </p>
                 </div>
+                
+                {/* Recent Searches Preview */}
+                {getRecentSearches().length > 0 && (
+                  <div className="border-t border-stone-200 pt-4">
+                    <p className="text-stone-600 text-sm font-medium mb-2">
+                      Recent Searches:
+                    </p>
+                    <div className="space-y-2">
+                      {getRecentSearches().map((search, index) => (
+                        <div key={index} className="text-xs text-stone-500 truncate">
+                          {search.predicted_product}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -309,7 +334,7 @@ export default function Profile() {
                       Search History
                     </h2>
                     <p className="text-stone-500 font-light">
-                      Your product searches from ImageSearch table
+                      Your recent product searches (newest first)
                     </p>
                   </div>
                 </div>
@@ -446,19 +471,43 @@ export default function Profile() {
                   </div>
                 </div>
 
+                {/* Recent Activity Section */}
                 <div className="mt-8 bg-stone-50 p-6 rounded-xl border border-stone-200">
-                  
-                    <div className="flex justify-between items-center py-3">
-                      <span className="text-stone-600">Account Created</span>
-                      <span className="text-stone-800 font-medium">
-                        {userDetails?.created_at
-                          ? formatDate(userDetails.created_at)
-                          : "Unknown"}
-                      </span>
-                    </div>
+                  <h3 className="font-serif text-xl text-stone-800 mb-4">
+                    Recent Activity
+                  </h3>
+                  <div className="space-y-3">
+                    {getRecentSearches().map((search, index) => (
+                      <div key={index} className="flex justify-between items-center py-2 border-b border-stone-200 last:border-b-0">
+                        <div>
+                          <p className="text-stone-800 font-medium">
+                            {search.predicted_product}
+                          </p>
+                          <p className="text-stone-500 text-sm">
+                            {formatDate(search.created_at)}
+                          </p>
+                        </div>
+                        {getBestPrice(search) && (
+                          <span className="text-green-600 font-medium">
+                            ₹{getBestPrice(search).toLocaleString("en-IN")}
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              
+
+                <div className="mt-6 bg-stone-50 p-6 rounded-xl border border-stone-200">
+                  <div className="flex justify-between items-center py-3">
+                    <span className="text-stone-600">Account Created</span>
+                    <span className="text-stone-800 font-medium">
+                      {userDetails?.created_at
+                        ? formatDate(userDetails.created_at)
+                        : "Unknown"}
+                    </span>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>

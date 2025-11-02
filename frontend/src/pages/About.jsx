@@ -1,14 +1,97 @@
 import { Sparkles, Crown, Heart, Target, Users, Star, Zap, Camera, Search, DollarSign } from "lucide-react"
+import { useState, useEffect } from "react"
 
 export default function About() {
+  const [currentSlide, setCurrentSlide] = useState(0)
+  
+  // HD E-commerce product images - using placeholder service with realistic product themes
+  const carouselImages = [
+    "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80", // Watch
+    "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&q=80", // Sunglasses
+    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80", // Headphones
+    "https://images.unsplash.com/photo-1560343090-f0409e92791a?w=800&q=80", // Shoes
+    "https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=800&q=80", // Perfume
+    "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=800&q=80", // Sneakers
+  ]
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % carouselImages.length)
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [])
+
   return (
     <div className="min-h-screen bg-amber-50">
-      {/* Hero Section - Light & Bright */}
-      <section className="relative py-24 bg-gradient-to-br from-amber-100 to-rose-50">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <div className="bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full inline-flex items-center gap-3 mb-8 border border-amber-200/50">
+      {/* Hero Section with Animated Image Carousel */}
+      <section className="relative py-24 bg-gradient-to-br from-amber-100 to-rose-50 overflow-hidden">
+        {/* Animated Background Images */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="flex animate-scroll-infinite" style={{ width: '200%' }}>
+            {[...carouselImages, ...carouselImages].map((img, idx) => (
+              <div 
+                key={idx}
+                className="w-1/6 h-full relative opacity-20"
+                style={{ 
+                  animation: 'scroll 30s linear infinite',
+                  animationDelay: `${idx * -5}s`
+                }}
+              >
+                <div 
+                  className="absolute inset-0 bg-cover bg-center transform hover:scale-110 transition-transform duration-700"
+                  style={{ 
+                    backgroundImage: `url(${img})`,
+                    filter: 'blur(2px)'
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Floating Product Cards - Stacked Sliding Effect */}
+        <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 pointer-events-none">
+          <div className="relative w-full h-80 max-w-7xl mx-auto">
+            {carouselImages.map((img, idx) => {
+              const offset = (idx - currentSlide + carouselImages.length) % carouselImages.length
+              const isActive = offset === 0
+              const isPrev = offset === carouselImages.length - 1
+              const isNext = offset === 1
+              
+              return (
+                <div
+                  key={idx}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ease-out"
+                  style={{
+                    transform: `
+                      translate(-50%, -50%)
+                      translateX(${offset * 120}%)
+                      scale(${isActive ? 1 : 0.85})
+                      rotateY(${offset * -15}deg)
+                    `,
+                    zIndex: carouselImages.length - offset,
+                    opacity: offset <= 2 ? 1 - (offset * 0.3) : 0,
+                    filter: `blur(${offset > 0 ? offset * 2 : 0}px)`
+                  }}
+                >
+                  <div className="w-64 h-64 md:w-80 md:h-80 bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-white">
+                    <img 
+                      src={img} 
+                      alt="Product"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center mt-80 md:mt-96">
+          <div className="bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full inline-flex items-center gap-3 mb-8 border border-amber-200/50 shadow-lg">
             <Sparkles size={20} className="text-amber-600" />
-            <span className="text-amber-800 font-light tracking-wider text-sm">AI-POWERED SMART SHOPPING ASSISTANT</span>
+            <span className="text-amber-800 font-light tracking-wider text-sm">AI-POWERED SMART SHOPPING</span>
           </div>
           
           <h1 className="font-serif text-6xl md:text-7xl text-amber-900 mb-6 leading-tight">
@@ -18,9 +101,20 @@ export default function About() {
             Snap. Identify. Compare. Save.
           </p>
         </div>
+
+        <style jsx>{`
+          @keyframes scroll {
+            0% {
+              transform: translateX(0);
+            }
+            100% {
+              transform: translateX(-100%);
+            }
+          }
+        `}</style>
       </section>
 
-      {/* Mission Section with Light Background */}
+      {/* Mission Section */}
       <section className="relative py-20 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
@@ -33,7 +127,7 @@ export default function About() {
             </p>
           </div>
 
-          {/* How It Works Section */}
+          {/* How It Works */}
           <div className="grid md:grid-cols-3 gap-8 mt-16">
             <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 p-8 text-center group hover:shadow-xl transition-all duration-500 rounded-2xl">
               <div className="w-16 h-16 bg-amber-500 text-white flex items-center justify-center mb-6 rounded-2xl mx-auto group-hover:scale-110 transition-transform">
@@ -68,7 +162,7 @@ export default function About() {
         </div>
       </section>
 
-      {/* Why Choose Us Section */}
+      {/* Why Choose Us */}
       <section className="py-20 bg-amber-50">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
@@ -124,7 +218,6 @@ export default function About() {
           </div>
 
           <div className="grid gap-8">
-            {/* Authenticity & Quality */}
             <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 p-8 rounded-2xl group hover:shadow-lg transition-all duration-300">
               <div className="flex items-start gap-6">
                 <div className="w-12 h-12 bg-amber-500 text-white flex items-center justify-center rounded-xl flex-shrink-0">
@@ -134,14 +227,12 @@ export default function About() {
                   <h3 className="font-serif text-2xl text-amber-900 mb-4">Authenticity Meets Quality</h3>
                   <p className="text-amber-700 font-light leading-relaxed">
                     Every product recommendation is backed by verified data and trusted retailers. 
-                    Our platform is carefully designed to bring only the best deals to you, ensuring 
-                    you shop with confidence and peace of mind.
+                    Our platform is carefully designed to bring only the best deals to you.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Community Driven */}
             <div className="bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200 p-8 rounded-2xl group hover:shadow-lg transition-all duration-300">
               <div className="flex items-start gap-6">
                 <div className="w-12 h-12 bg-rose-500 text-white flex items-center justify-center rounded-xl flex-shrink-0">
@@ -150,15 +241,13 @@ export default function About() {
                 <div>
                   <h3 className="font-serif text-2xl text-rose-900 mb-4">Community Driven</h3>
                   <p className="text-rose-700 font-light leading-relaxed">
-                    Born from the need to help shoppers make better decisions. The desire to provide 
-                    genuine value and save you money is what drives our platform forward. We're built 
-                    for smart shoppers, by people who understand smart shopping.
+                    Built for smart shoppers, by people who understand smart shopping. We're driven by 
+                    the desire to provide genuine value and help you make better decisions.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* User Centric */}
             <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 p-8 rounded-2xl group hover:shadow-lg transition-all duration-300">
               <div className="flex items-start gap-6">
                 <div className="w-12 h-12 bg-orange-500 text-white flex items-center justify-center rounded-xl flex-shrink-0">
@@ -167,9 +256,8 @@ export default function About() {
                 <div>
                   <h3 className="font-serif text-2xl text-orange-900 mb-4">User Centric Design</h3>
                   <p className="text-orange-700 font-light leading-relaxed">
-                    Built with love for smart shoppers who value both quality and savings. Every feature 
-                    is designed with your convenience in mind, making price comparison effortless and 
-                    enjoyable. Your satisfaction is our ultimate goal.
+                    Every feature is designed with your convenience in mind, making price comparison 
+                    effortless and enjoyable. Your satisfaction is our ultimate goal.
                   </p>
                 </div>
               </div>
@@ -178,7 +266,7 @@ export default function About() {
         </div>
       </section>
 
-      {/* CTA Section - Bright & Inviting */}
+      {/* CTA Section */}
       <section className="bg-amber-900 border-b border-amber-700 py-20">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="font-serif text-4xl md:text-5xl text-white mb-6">

@@ -1,396 +1,448 @@
 import re
-import requests
-from bs4 import BeautifulSoup
-from difflib import SequenceMatcher
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import TimeoutException
+from webdriver_manager.chrome import ChromeDriverManager
 
 PLACEHOLDER_IMAGE = "https://placehold.co/300x400/EEE/31343C?text=No+Image"
-
-# Common accessory/related product keywords to filter out
-ACCESSORY_KEYWORDS = [
-    'case', 'cover', 'stand', 'holder', 'mount', 'adapter', 'cable', 'charger',
-    'screen protector', 'tempered glass', 'earphone', 'headphone', 'bag', 'pouch','covers',
-    'stylus', 'pen', 'accessory', 'combo', 'kit', 'set of', 'pack of', 'bundle',
-    'replacement', 'spare', 'belt', 'strap', 'band', 'clip', 'sleeve', 'skin',
-    'decal', 'sticker', 'cleaner', 'wipe', 'protector', 'guard', 'film','pads'
-]
 
 def clean_price_text(price_text: str) -> int:
     """Extracts integer rupee value from text."""
     if not price_text:
         return 0
-    m = re.search(r'[\d,]+', str(price_text).replace('₹','').replace('Rs',''))
+    m = re.search(r'[\d,]+', str(price_text).replace('₹','').replace('Rs','').replace(' ',''))
     if m:
         return int(m.group(0).replace(',', ''))
     return 0
 
-def calculate_similarity(str1: str, str2: str) -> float:
-    """Calculate similarity ratio between two strings."""
-    return SequenceMatcher(None, str1.lower(), str2.lower()).ratio()
+def setup_driver(headless=True):
+    """Setup Chrome driver with headless option."""
+    chrome_options = Options()
+    
+    if headless:
+        chrome_options.add_argument('--headless=new')
+    
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options.add_argument('--window-size=1920,1080')
+    chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+    
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+    chrome_options.add_experimental_option("prefs", {"profile.default_content_setting_values.notifications": 2})
+    
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    
+    return driver
 
-def is_accessory(title: str, query: str) -> bool:
-    """
-    Check if product is an accessory or related product.
-    Returns True if it's an accessory, False if it's the main product.
-    """
-    title_lower = title.lower()
-    query_lower = query.lower()
-    
-    # Check for accessory keywords
-    for keyword in ACCESSORY_KEYWORDS:
-        if keyword in title_lower:
-            return True
-    
-    # Check if title contains query terms (main product should match well)
-    # Extract main product terms from query (remove brand names in some cases)
-    query_words = set(query_lower.split())
-    title_words = set(title_lower.split())
-    
-    # Calculate overlap - main products should have good overlap
-    common_words = query_words.intersection(title_words)
-    
-   
-    if len(common_words) < len(query_words) * 0.3:  # Less than 30% overlap
-        return True
-    
-   
-    if ' for ' in title_lower:
-       
-        for_index = title_lower.find(' for ')
-        after_for = title_lower[for_index:]
-        if any(word in after_for for word in query_words):
-            return True
-    
-    return False
+def get_element_text(driver, selectors, default="N/A"):
+    """Try multiple selectors and return text of first found element."""
+    for selector in selectors:
+        try:
+            element = driver.find_element(By.CSS_SELECTOR, selector)
+            text = element.text.strip()
+            if text:
+                return text
+        except:
+            continue
+    return default
 
-def is_exact_product_match(title: str, query: str, min_similarity: float = 0.4) -> bool:
-    """
-    Check if product title matches the query intent.
-    Returns True if it's a good match for the searched product.
-    """
-    # First check if it's an accessory
-    if is_accessory(title, query):
-        return False
-    
-    # Calculate similarity
-    similarity = calculate_similarity(title, query)
-    
-    # Check if main query words are present
-    query_words = query.lower().split()
-    title_lower = title.lower()
-    
-    matches = sum(1 for word in query_words if word in title_lower)
-    match_ratio = matches / len(query_words) if query_words else 0
-    
-    # Product should match at least 40% similarity or have good word overlap
-    return similarity >= min_similarity or match_ratio >= 0.5
+def get_element_attribute(driver, selectors, attribute, default=""):
+    """Try multiple selectors and return attribute of first found element."""
+    for selector in selectors:
+        try:
+            element = driver.find_element(By.CSS_SELECTOR, selector)
+            attr = element.get_attribute(attribute)
+            if attr:
+                return attr
+        except:
+            continue
+    return default
 
-def scrape_snapdeal_search(query: str, filter_accessories: bool = True):
-    """
-    Scrapes Snapdeal search results.
-    Returns list of dicts: [{'price': int, 'url': str, 'image': str, 'title': str}, …]
-    """
-    search_url = f"https://www.snapdeal.com/search?keyword={query.replace(' ', '%20')}"
+def enter_pincode_snapdeal(driver, pincode: str):
+    """Enter pincode on Snapdeal product page."""
+    print(f"📍 Setting pincode to {pincode}...")
+    time.sleep(2)
+    
+    # Method 1: Direct input field
     try:
-        resp = requests.get(search_url, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }, timeout=10)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
-        
-        results = []
-        products = soup.select("div.product-tuple-listing")
-        
-        for product in products:
-            link_tag = product.select_one("a.dp-widget-link")
-            price_tag = product.select_one("span.product-price")
-            img_tag = product.select_one("img.product-image")
-            title_tag = product.select_one("p.product-title")
-
-            if link_tag and price_tag:
-                product_url = link_tag.get("href")
-                price = clean_price_text(price_tag.text)
-                title = title_tag.text.strip() if title_tag else ""
-                
-                # Filter accessories if enabled
-                if filter_accessories and title:
-                    if not is_exact_product_match(title, query):
-                        continue
-                
-                image_url = img_tag.get('src') or img_tag.get('data-src') or PLACEHOLDER_IMAGE
-                
-                if price > 0 and product_url:
-                    results.append({
-                        "price": price,
-                        "url": product_url,
-                        "image": image_url,
-                        "title": title
-                    })
-        
-        return results
-
-    except Exception as e:
-        print(f"Snapdeal search error: {e}")
-        return []
-
-def scrape_product_details(product_url: str, pincode: str = None):
-    """
-    Scrapes detailed information from a Snapdeal product page.
-    Returns dict with all available product details.
-    """
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-        
-        
-        cookies = {}
-        if pincode:
-            cookies['pincode'] = pincode
-        
-        resp = requests.get(product_url, headers=headers, cookies=cookies, timeout=10)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
-        
-        details = {
-            "url": product_url,
-            "title": "",
-            "price": 0,
-            "original_price": 0,
-            "discount": "",
-            "rating": 0.0,
-            "review_count": 0,
-            "image": PLACEHOLDER_IMAGE,
-            "images": [],
-            "delivery_date": "",
-            "delivery_info": "",
-            "availability": "",
-            "brand": "",
-            "description": "",
-            "features": [],
-            "specifications": {},
-            "seller": "",
-            "in_stock": False,
-            "cod_available": False
-        }
-        
-        # Title
-        title_el = soup.select_one("h1.pdp-e-i-head")
-        if not title_el:
-            title_el = soup.select_one("h1[itemprop='name']")
-        if title_el:
-            details["title"] = title_el.text.strip()
-        
-        # Price
-        price_el = soup.select_one("span.payBlkBig")
-        if not price_el:
-            price_el = soup.select_one("span.selling-price")
-        if price_el:
-            details["price"] = clean_price_text(price_el.text)
-        
-        # Original price (MRP)
-        mrp_el = soup.select_one("span.pdp-strikthrough-price")
-        if not mrp_el:
-            mrp_el = soup.select_one("span.lfloat.product-price.strike")
-        if mrp_el:
-            details["original_price"] = clean_price_text(mrp_el.text)
-        
-        # Discount
-        discount_el = soup.select_one("span.percent-desc")
-        if discount_el:
-            details["discount"] = discount_el.text.strip()
-        
-        # Rating
-        rating_el = soup.select_one("span.avrg-rating")
-        if not rating_el:
-            rating_el = soup.select_one("span[itemprop='ratingValue']")
-        if rating_el:
+        pincode_input = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.ID, "pincode"))
+        )
+        if pincode_input.is_displayed():
+            pincode_input.clear()
+            pincode_input.send_keys(pincode)
+            time.sleep(1)
+            
             try:
-                details["rating"] = float(rating_el.text.strip())
+                check_btn = driver.find_element(By.ID, "checkServiceability")
+                check_btn.click()
+                print(f"   ✓ Pincode set successfully")
+                time.sleep(3)
+                return True
             except:
                 pass
+    except:
+        pass
+    
+    # Method 2: JavaScript injection
+    try:
+        driver.execute_script(f"""
+            var input = document.getElementById('pincode');
+            if(input) {{
+                input.value = '{pincode}';
+                input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+            }}
+        """)
+        time.sleep(1)
+        driver.execute_script("""
+            var btn = document.getElementById('checkServiceability');
+            if(btn) btn.click();
+        """)
+        print(f"   ✓ Pincode set via JavaScript")
+        time.sleep(4)
+        return True
+    except:
+        pass
+    
+    # Method 3: Click delivery section first
+    try:
+        delivery_elements = driver.find_elements(By.XPATH, 
+            "//*[contains(text(), 'Delivery') or contains(text(), 'Check') or contains(text(), 'Pincode')]")
+        for elem in delivery_elements[:3]:
+            try:
+                if elem.is_displayed():
+                    driver.execute_script("arguments[0].scrollIntoView(true);", elem)
+                    time.sleep(1)
+                    elem.click()
+                    time.sleep(2)
+                    
+                    pincode_input = driver.find_element(By.ID, "pincode")
+                    pincode_input.clear()
+                    pincode_input.send_keys(pincode)
+                    time.sleep(1)
+                    
+                    check_btn = driver.find_element(By.ID, "checkServiceability")
+                    check_btn.click()
+                    print(f"   ✓ Pincode set after clicking delivery section")
+                    time.sleep(4)
+                    return True
+            except:
+                continue
+    except:
+        pass
+    
+    print("   ⚠️  Could not set pincode")
+    return False
+
+def extract_delivery_info(driver, pincode_entered=False):
+    """Extract delivery information from product page."""
+    delivery_info = {
+        'delivery_date': None,
+        'delivery_text': None
+    }
+    
+    time.sleep(2)
+    
+    try:
+        # Get page text for regex matching
+        page_text = driver.find_element(By.TAG_NAME, "body").text
         
-        # Review count
-        review_el = soup.select_one("span.ratings-count")
-        if not review_el:
-            review_el = soup.select_one("span[itemprop='reviewCount']")
-        if review_el:
-            review_text = review_el.text.strip()
-            match = re.search(r'([\d,]+)', review_text)
+        # Pattern 1: "Delivery by DD Month" or "Delivered by DD Month"
+        match = re.search(r'Deliver(?:ed|y) by\s+(\d{1,2}\s+\w{3,}(?:\s+\d{4})?)', page_text, re.IGNORECASE)
+        if match:
+            delivery_info['delivery_date'] = match.group(1)
+            delivery_info['delivery_text'] = match.group(0)
+            return delivery_info
+        
+        # Pattern 2: "Generally delivered in X - Y days"
+        match = re.search(r'Generally delivered in\s+(\d+\s*-\s*\d+\s+days?)', page_text, re.IGNORECASE)
+        if match:
+            delivery_info['delivery_date'] = match.group(1)
+            delivery_info['delivery_text'] = f"Generally delivered in {match.group(1)}"
+            return delivery_info
+        
+        # Pattern 3: "Get it by [date]"
+        match = re.search(r'Get it by\s+(\d{1,2}\s+\w{3,}(?:\s+\d{4})?)', page_text, re.IGNORECASE)
+        if match:
+            delivery_info['delivery_date'] = match.group(1)
+            delivery_info['delivery_text'] = match.group(0)
+            return delivery_info
+        
+        # Pattern 4: Look for dates in delivery context
+        match = re.search(r'(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*\d{0,4})', 
+                         page_text, re.IGNORECASE)
+        if match:
+            context_start = max(0, match.start() - 40)
+            context_end = min(len(page_text), match.end() + 40)
+            context = page_text[context_start:context_end].lower()
+            
+            if any(word in context for word in ['deliver', 'dispatch', 'ship', 'get it', 'expected']):
+                delivery_info['delivery_date'] = match.group(1)
+                delivery_info['delivery_text'] = f"Expected by {match.group(1)}"
+                return delivery_info
+        
+        # If pincode was entered but no specific date found, look for general delivery text
+        if pincode_entered:
+            match = re.search(r'(available for delivery|can be delivered|delivery available)', 
+                            page_text, re.IGNORECASE)
             if match:
-                details["review_count"] = int(match.group(1).replace(',', ''))
+                delivery_info['delivery_date'] = "Delivery available"
+                delivery_info['delivery_text'] = "Product available for delivery to your pincode"
+                return delivery_info
         
-        # Main image
-        img_el = soup.select_one("img.cloudzoom")
-        if not img_el:
-            img_el = soup.select_one("img[itemprop='image']")
-        if img_el:
-            details["image"] = img_el.get("src", PLACEHOLDER_IMAGE)
+    except Exception as e:
+        print(f"   ⚠️  Error extracting delivery: {e}")
+    
+    return delivery_info
+
+def get_snapdeal_product_details(driver, product_url: str, pincode: str = None):
+    """Fetches detailed information from Snapdeal product page."""
+    try:
+        driver.get(product_url)
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        time.sleep(3)
         
-        # All images
-        img_thumbs = soup.select("li.slider-cell img")
-        for img in img_thumbs[:6]:
-            img_url = img.get("src", "")
-            if img_url and img_url not in details["images"]:
-                # Get higher resolution image
-                img_url = img_url.replace('_thumb', '_zoom')
-                details["images"].append(img_url)
+        details = {}
         
-        # Delivery info
-        delivery_el = soup.select_one("span.availDetailCol")
-        if not delivery_el:
-            delivery_el = soup.select_one("div.delivery-info")
-        if delivery_el:
-            details["delivery_info"] = delivery_el.text.strip()
-            # Extract delivery date if present
-            date_match = re.search(r'(\d{1,2}\s+\w+)', delivery_el.text)
-            if date_match:
-                details["delivery_date"] = date_match.group(1)
+        # Enter pincode if provided
+        pincode_entered = False
+        if pincode:
+            pincode_entered = enter_pincode_snapdeal(driver, pincode)
+            time.sleep(2)
         
-        # Availability
-        avail_el = soup.select_one("div.available")
-        if not avail_el:
-            avail_el = soup.select_one("span.in-stock")
-        if avail_el:
-            avail_text = avail_el.text.strip()
-            details["availability"] = avail_text
-            details["in_stock"] = "in stock" in avail_text.lower() or "available" in avail_text.lower()
+        # Title
+        title_selectors = ["h1.pdp-e-i-head", "h1[itemprop='name']", "h1.product-title", "h1"]
+        details['title'] = get_element_text(driver, title_selectors, "No title found")
+        
+        # Image
+        image_selectors = ["img.cloudzoom", "img[itemprop='image']", "img.product-image", "img.pdpCarouselImg"]
+        details['image'] = get_element_attribute(driver, image_selectors, 'src', PLACEHOLDER_IMAGE)
+        
+        # Rating
+        rating_selectors = ["span[itemprop='ratingValue']", "span.avrg-rating", "div.rating-value"]
+        details['rating'] = get_element_text(driver, rating_selectors, "No rating")
+        
+        # Reviews
+        review_selectors = ["span[itemprop='ratingCount']", "span.total-rating", "span.review-count"]
+        review_text = get_element_text(driver, review_selectors, "0")
+        match = re.search(r'(\d+)', review_text.replace(',', ''))
+        details['reviews'] = match.group(1) if match else "0"
+        
+        # Delivery information
+        delivery_info = extract_delivery_info(driver, pincode_entered)
+        if delivery_info['delivery_date']:
+            details['delivery_date'] = delivery_info['delivery_date']
+            details['delivery_text'] = delivery_info['delivery_text']
         else:
-            # Default to in stock if no availability info
-            details["in_stock"] = True
-            details["availability"] = "Check availability"
+            details['delivery_date'] = "Check on website"
+            details['delivery_text'] = "Enter pincode on website for delivery info"
         
-        # COD availability
-        cod_el = soup.select_one("div.cod-text")
-        if cod_el and "cash on delivery" in cod_el.text.lower():
-            details["cod_available"] = True
+        # Price
+        price_selectors = ["span.pdp-final-price", "span.payBlkBig", "span[itemprop='price']", "span.lfloat.product-price"]
+        price_text = get_element_text(driver, price_selectors, "0")
+        details['price'] = clean_price_text(price_text)
         
-        # Brand
-        brand_el = soup.select_one("a.dp-brand-title")
-        if not brand_el:
-            brand_el = soup.select_one("span[itemprop='brand']")
-        if brand_el:
-            details["brand"] = brand_el.text.strip()
+        # Original price
+        mrp_selectors = ["span.pdp-mrp", "span.lfloat.markedPrice", "span.strikedPriceText"]
+        mrp_text = get_element_text(driver, mrp_selectors, "0")
+        details['original_price'] = clean_price_text(mrp_text)
         
-        # Features/Description
-        features_el = soup.select("div.h-content ul li")
-        if features_el:
-            for li in features_el:
-                text = li.text.strip()
-                if text:
-                    details["features"].append(text)
+        # Discount
+        discount_selectors = ["span.percent-desc", "div.percent-desc", "span.pdp-discount"]
+        details['discount'] = get_element_text(driver, discount_selectors, "No discount")
         
-        # If no features in list, try description
-        if not details["features"]:
-            desc_el = soup.select_one("div.detailssubbox p")
-            if desc_el:
-                details["description"] = desc_el.text.strip()
+        # Seller
+        seller_selectors = ["div.seller-name", "a.seller-link", "span[itemprop='seller']"]
+        details['seller'] = get_element_text(driver, seller_selectors, "N/A")
         
-        # Specifications
-        spec_rows = soup.select("div.spec-body tr")
-        for row in spec_rows:
-            cells = row.select("td")
-            if len(cells) == 2:
-                key = cells[0].text.strip()
-                value = cells[1].text.strip()
-                if key and value:
-                    details["specifications"][key] = value
-        
-        # Alternative spec format
-        if not details["specifications"]:
-            spec_items = soup.select("div.detailssubbox")
-            for item in spec_items:
-                label = item.select_one("span.h-bold")
-                value_el = item.select_one("span:not(.h-bold)")
-                if label and value_el:
-                    details["specifications"][label.text.strip()] = value_el.text.strip()
-        
-        # Seller info
-        seller_el = soup.select_one("span.seller-name")
-        if not seller_el:
-            seller_el = soup.select_one("div.sold-by a")
-        if seller_el:
-            details["seller"] = seller_el.text.strip()
+        # Stock status
+        try:
+            add_to_cart = driver.find_element(By.CSS_SELECTOR, "div#add-cart-button-id, button.buy-button")
+            details['in_stock'] = add_to_cart.is_displayed() and add_to_cart.is_enabled()
+        except:
+            details['in_stock'] = False
         
         return details
         
     except Exception as e:
-        print(f"Snapdeal product details error: {e}")
-        return {"error": str(e), "url": product_url}
+        print(f"   ❌ Error fetching details: {e}")
+        return None
 
-def scrape_snapdeal_lowest_price(query: str, pincode: str = None, filter_accessories: bool = True):
-   
+def scrape_snapdeal(query: str, pincode: str = None, headless: bool = True):
+    """Scrape Snapdeal for lowest priced product."""
+    driver = None
     try:
-        # Step 1: Get search results with filtering
-        print(f"Searching Snapdeal for: {query}")
-        products = scrape_snapdeal_search(query, filter_accessories=filter_accessories)
+        print("\n" + "="*60)
+        print("🔍 SNAPDEAL SCRAPER")
+        print("="*60)
+        print(f"Search: {query}")
+        if pincode:
+            print(f"Pincode: {pincode}")
+        print()
+        
+        driver = setup_driver(headless=headless)
+        
+        search_url = f"https://www.snapdeal.com/search?keyword={query.replace(' ', '+')}"
+        print(f"🔍 Searching Snapdeal...")
+        
+        driver.get(search_url)
+        
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        time.sleep(4)
+        
+        # Scroll to load products
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
+        time.sleep(2)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+        time.sleep(2)
+        
+        products = []
+        seen_urls = set()
+        
+        # Find product containers
+        product_containers = driver.find_elements(By.XPATH, 
+            "//div[contains(@class, 'col') and .//a[contains(@href, '/product/')]]")
+        
+        print(f"📦 Found {len(product_containers)} product containers\n")
+        
+        for container in product_containers[:50]:
+            try:
+                # Get product link
+                link = container.find_element(By.XPATH, ".//a[contains(@href, '/product/')]")
+                href = link.get_attribute('href')
+                
+                if not href or href in seen_urls:
+                    continue
+                
+                seen_urls.add(href)
+                
+                # Get title
+                title = ""
+                try:
+                    title = link.text.strip()
+                    if not title:
+                        text_elems = container.find_elements(By.XPATH, ".//p | .//div[string-length(text()) > 10]")
+                        for elem in text_elems:
+                            text = elem.text.strip()
+                            if text and '₹' not in text and len(text) > 10:
+                                title = text
+                                break
+                except:
+                    pass
+                
+                # Get price - Look for ₹ symbol
+                price = 0
+                try:
+                    price_elements = container.find_elements(By.XPATH, ".//*[contains(text(), '₹') or contains(text(), 'Rs')]")
+                    for price_elem in price_elements:
+                        price_text = price_elem.text.strip()
+                        temp_price = clean_price_text(price_text)
+                        if temp_price > 100:  # Valid price
+                            price = temp_price
+                            break
+                except:
+                    pass
+                
+                if price > 100:  # Valid product found
+                    if not title:
+                        title = f"Product at ₹{price}"
+                    
+                    products.append({
+                        "price": price,
+                        "url": href,
+                        "preview_title": title
+                    })
+                    print(f"   ✓ Found: ₹{price:,} - {title[:50]}...")
+                    
+            except Exception as e:
+                continue
         
         if not products:
-            return {"error": "No products found matching the criteria"}
+            print("❌ No products found")
+            return None
         
-        print(f"Found {len(products)} relevant products")
+        print(f"\n📊 Total products found: {len(products)}")
+        print(f"📦 Finding lowest price...\n")
         
-        # Step 2: Find lowest priced product
-        lowest = min(products, key=lambda x: x['price'])
-        print(f"Lowest price: ₹{lowest['price']}")
-        print(f"Product: {lowest['title']}")
-        print(f"URL: {lowest['url']}")
+        # Remove duplicates and sort by price
+        unique_products = {p['url']: p for p in products}.values()
+        sorted_products = sorted(unique_products, key=lambda x: x['price'])
         
-        # Step 3: Scrape full details of lowest priced product
-        print("Fetching product details...")
-        details = scrape_product_details(lowest['url'], pincode)
+        # Get details of lowest priced product
+        lowest = sorted_products[0]
+        print(f"💰 Lowest price: ₹{lowest['price']:,}")
+        print(f"🔗 URL: {lowest['url'][:60]}...\n")
         
-        return details
+        details = get_snapdeal_product_details(driver, lowest['url'], pincode)
         
+        if details:
+            details['url'] = lowest['url']
+            return details
+        
+        return None
+        
+    except TimeoutException:
+        print("❌ Timeout: Page took too long to load")
+        return None
     except Exception as e:
-        return {"error": str(e)}
+        print(f"❌ Scraping error: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+    
+    finally:
+        if driver:
+            driver.quit()
+
+def print_result(product):
+    """Pretty print the result."""
+    if not product:
+        print("\n❌ No result to display")
+        return
+    
+    print("\n" + "="*60)
+    print("🎯 LOWEST PRICED PRODUCT ON SNAPDEAL")
+    print("="*60)
+    print(f"\n📦 Title: {product['title']}")
+    print(f"💰 Price: ₹{product['price']:,}")
+    
+    if product.get('original_price', 0) > 0:
+        print(f"💸 Original Price: ₹{product['original_price']:,}")
+    
+    print(f"🎁 Discount: {product.get('discount', 'No discount')}")
+    print(f"⭐ Rating: {product.get('rating', 'N/A')} ({product.get('reviews', '0')} reviews)")
+    print(f"🚚 Delivery: {product.get('delivery_date', 'N/A')}")
+    
+    if product.get('delivery_text'):
+        print(f"   Details: {product['delivery_text']}")
+    
+    print(f"🏪 Seller: {product.get('seller', 'N/A')}")
+    print(f"📦 In Stock: {'Yes' if product.get('in_stock', False) else 'Check website'}")
+    print(f"🖼️  Image: {product['image'][:60]}...")
+    print(f"🔗 URL: {product['url']}")
+    print("\n" + "="*60)
 
 
-# Example usage
-"""if __name__ == "__main__":
-    # Search for a product and get lowest priced item details
-    result = scrape_snapdeal_lowest_price(
-        query="wireless mouse",
-        pincode="682001",  # Optional: Pass pincode from frontend
-        filter_accessories=True  # Filter out cases, covers, etc.
+# RUN IT!
+if __name__ == "__main__":
+    result = scrape_snapdeal(
+        query="vacuum cleaner",
+        pincode="688524",
+        headless=True  # Set to False to see browser
     )
     
-    # Print results
-    print("\n" + "="*60)
-    print("LOWEST PRICED PRODUCT DETAILS (SNAPDEAL)")
-    print("="*60)
-    
-    if "error" in result:
-        print(f"Error: {result['error']}")
-    else:
-        print(f"\nTitle: {result['title']}")
-        print(f"Price: ₹{result['price']}")
-        if result['original_price']:
-            print(f"Original Price: ₹{result['original_price']}")
-            savings = result['original_price'] - result['price']
-            print(f"You Save: ₹{savings}")
-        if result['discount']:
-            print(f"Discount: {result['discount']}")
-        print(f"Rating: {result['rating']} stars ({result['review_count']} reviews)")
-        print(f"Brand: {result['brand']}")
-        print(f"Availability: {result['availability']}")
-        print(f"In Stock: {result['in_stock']}")
-        print(f"COD Available: {result['cod_available']}")
-        print(f"Delivery Info: {result['delivery_info']}")
-        if result['delivery_date']:
-            print(f"Delivery Date: {result['delivery_date']}")
-        print(f"Seller: {result['seller']}")
-        print(f"\nImage: {result['image']}")
-        print(f"Product URL: {result['url']}")
-        
-        if result['features']:
-            print(f"\nKey Features:")
-            for feat in result['features'][:5]:
-                print(f"  • {feat}")
-        
-        if result['specifications']:
-            print(f"\nSpecifications:")
-            for key, val in list(result['specifications'].items())[:5]:
-                print(f"  • {key}: {val}")
-        
-        if result['images']:
-            print(f"\nAdditional Images: {len(result['images'])} available")"""
+    print_result(result)
