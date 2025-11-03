@@ -10,11 +10,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 
-# If you want to install LangChain:
-# pip install langchain
+
 from langchain_core.runnables import RunnableMap, RunnableLambda,RunnableConfig,Runnable
 
- # minimal abstraction
 
 
 PLACEHOLDER_IMAGE = "https://placehold.co/300x400/EEE/31343C?text=No+Image"
@@ -48,7 +46,7 @@ def get_browser(headless=True):
     browser = webdriver.Chrome(service=service, options=opts)
     return browser
 
-# Here we define a LangChain-style Runnable for search + pick lowest
+
 class AmazonSearchRunnable(Runnable):
     def __init__(self, query: str, pincode: str = None, headless: bool = True):
         self.query = query
@@ -261,8 +259,7 @@ class AmazonSearchRunnable(Runnable):
 
         return details
 
-# --- FIX IS HERE ---
-# This is the wrapper function that price_fetcher.py is looking for.
+
 def scrape_amazon_lowest_price(query: str, pincode: str = None, headless: bool = True):
     """
     Wrapper function to match the interface expected by price_fetcher.py.

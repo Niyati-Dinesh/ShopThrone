@@ -40,6 +40,25 @@ export default function Dashboard() {
     snapdeal: "pending",
   });
 
+  // Logo configuration with fallbacks
+  const logoConfig = {
+    Amazon: {
+      src: "/amazon_logo.jpeg",
+      fallbackBg: "bg-yellow-100",
+      fallbackText: "AMZ"
+    },
+    Flipkart: {
+      src: "/flipkart_logo.jpeg",
+      fallbackBg: "bg-blue-100",
+      fallbackText: "FLP"
+    },
+    Snapdeal: {
+      src: "/snapdeal_logo.png",
+      fallbackBg: "bg-red-100",
+      fallbackText: "SND"
+    }
+  };
+
   useEffect(() => {
     const fetchUserPincode = async () => {
       try {
@@ -155,21 +174,21 @@ export default function Dashboard() {
       products.push({
         site: "Amazon",
         data: comparisonData.amazon,
-        logo: "/amazon_logo.jpeg",
+        logo: logoConfig.Amazon
       });
     }
     if (comparisonData.flipkart) {
       products.push({
         site: "Flipkart",
         data: comparisonData.flipkart,
-        logo: "/flipkart_logo.jpeg",
+        logo: logoConfig.Flipkart
       });
     }
     if (comparisonData.snapdeal) {
       products.push({
         site: "Snapdeal",
         data: comparisonData.snapdeal,
-        logo: "/snapdeal_logo.png",
+        logo: logoConfig.Snapdeal
       });
     }
 
@@ -196,8 +215,6 @@ export default function Dashboard() {
     return highest - lowest;
   };
 
-  // Add this function to your component
-  
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50/30 to-amber-50 py-8 px-4">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -217,66 +234,48 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Upload Section - Compact Design */}
+        {/* Main Upload & Identification Section */}
         <div className="bg-white/80 backdrop-blur-sm border border-amber-200/60 rounded-3xl p-6 shadow-lg">
-          <div className="grid md:grid-cols-2 gap-6 items-center">
-            {/* Image Upload Area - Smaller */}
-            <label className="relative aspect-video md:aspect-square border-2 border-dashed border-amber-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-amber-400 hover:bg-amber-50/50 transition group overflow-hidden">
-              {preview ? (
-                <>
-                  <img
-                    src={preview}
-                    alt="Preview"
-                    className="w-full h-full object-contain p-4"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                    <div className="text-white text-center">
-                      <Camera size={32} className="mx-auto mb-2" />
-                      <span className="text-sm font-light">Change Image</span>
+          <div className="grid md:grid-cols-2 gap-6 items-start">
+            {/* Left Column - Image Upload */}
+            <div className="space-y-4">
+              <label className="relative aspect-video border-2 border-dashed border-amber-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-amber-400 hover:bg-amber-50/50 transition group overflow-hidden">
+                {preview ? (
+                  <>
+                    <img
+                      src={preview}
+                      alt="Preview"
+                      className="w-full h-full object-contain p-4"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                      <div className="text-white text-center">
+                        <Camera size={32} className="mx-auto mb-2" />
+                        <span className="text-sm font-light">Change Image</span>
+                      </div>
                     </div>
+                  </>
+                ) : (
+                  <div className="text-center p-6">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-amber-500/20 to-rose-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Camera size={32} className="text-amber-700" />
+                    </div>
+                    <span className="text-amber-900 font-medium block mb-1">
+                      Upload Product Image
+                    </span>
+                    <span className="text-sm text-amber-600 font-light">
+                      PNG, JPG, WEBP up to 10MB
+                    </span>
                   </div>
-                </>
-              ) : (
-                <div className="text-center p-6">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-amber-500/20 to-rose-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Camera size={32} className="text-amber-700" />
-                  </div>
-                  <span className="text-amber-900 font-medium block mb-1">
-                    Upload Product Image
-                  </span>
-                  <span className="text-sm text-amber-600 font-light">
-                    PNG, JPG, WEBP up to 10MB
-                  </span>
-                </div>
-              )}
-              <input
-                type="file"
-                className="hidden"
-                onChange={handleFileChange}
-                accept="image/*"
-              />
-            </label>
+                )}
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  accept="image/*"
+                />
+              </label>
 
-            {/* Actions Area */}
-            <div className="flex flex-col justify-center space-y-4">
-              <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
-                <div className="flex items-start gap-3">
-                  <Package
-                    className="text-amber-600 mt-1 flex-shrink-0"
-                    size={24}
-                  />
-                  <div>
-                    <h3 className="font-medium text-amber-900 mb-1 text-lg">
-                      Quick Tips
-                    </h3>
-                    <p className="text-sm text-amber-700 font-light">
-                      Ensure good lighting and the product is clearly visible in
-                      the frame
-                    </p>
-                  </div>
-                </div>
-              </div>
-
+              {/* File Info */}
               {file && (
                 <div className="bg-white border border-amber-200 rounded-xl p-3 flex items-center gap-3">
                   <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -293,6 +292,7 @@ export default function Dashboard() {
                 </div>
               )}
 
+              {/* Upload Button */}
               <button
                 onClick={handleImageUpload}
                 disabled={!file || loadingStep === 1}
@@ -311,82 +311,116 @@ export default function Dashboard() {
                 )}
               </button>
             </div>
+
+            {/* Right Column - Product Identification & Search */}
+            <div className="space-y-4 ">
+              {/* Quick Tips */}
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 ">
+                <div className="flex items-start gap-3">
+                  <Package
+                    className="text-amber-600 mt-1 flex-shrink-0"
+                    size={24}
+                  />
+                  <div>
+                    <h3 className="font-medium text-amber-900 mb-1 text-lg">
+                      Quick Tips
+                    </h3>
+                    <p className="text-sm text-amber-700 font-light">
+                      Ensure good lighting and the product is clearly visible in
+                      the frame
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 ">
+                <div className="flex items-start gap-3">
+                  <Camera
+                    className="text-amber-600 mt-1 flex-shrink-0"
+                    size={24}
+                  />
+                  <div>
+                    <h3 className="font-medium text-amber-900 mb-1 text-lg">
+                      Photography Tips
+                    </h3>
+                    <p className="text-sm text-amber-700 font-light">
+                      Take photos against a plain, contrasting background to
+                      make your product stand out
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {/* Product Identification Section */}
+              {step1Data && (
+                <div className="space-y-4 mt-5">
+                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mt-12">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Check size={24} className="text-amber-700" />
+                      </div>
+                      <div className="flex-1">
+                        {isEditingProduct ? (
+                          <div className="space-y-3">
+                            <input
+                              type="text"
+                              value={editedProduct}
+                              onChange={(e) => setEditedProduct(e.target.value)}
+                              className="w-full px-4 py-3 border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-lg"
+                              placeholder="Enter product name"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => setIsEditingProduct(false)}
+                              className="w-full px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition flex items-center justify-center gap-2 shadow-md"
+                            >
+                              <Check size={18} />
+                              Done Editing
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-xs text-amber-700 font-medium uppercase tracking-wide">
+                              PRODUCT IDENTIFIED
+                            </p>
+                            <p className="text-xl md:text-2xl font-serif text-amber-900">
+                              {editedProduct}
+                            </p>
+                            <button
+                              onClick={() => setIsEditingProduct(true)}
+                              className="px-4 py-2 bg-white border border-amber-300 hover:border-amber-400 text-amber-700 rounded-xl transition flex items-center gap-2 shadow-sm"
+                            >
+                              <Edit2 size={16} />
+                              Edit
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleGetDeals}
+                    disabled={loadingStep === 2}
+                    className="w-full bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white font-light py-4 px-6 rounded-xl flex items-center justify-center disabled:opacity-50 transition shadow-lg hover:shadow-xl text-lg"
+                  >
+                    {loadingStep === 2 ? (
+                      <>
+                        <Loader2 size={22} className="animate-spin mr-2" />
+                        Searching Platforms...
+                      </>
+                    ) : (
+                      <>
+                        <Search size={22} className="mr-2" />
+                        Compare Prices Now
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Product Identification & Search Section */}
-        {step1Data && (
-          <div className="bg-white/80 backdrop-blur-sm border border-amber-200/60 rounded-3xl p-6 shadow-lg">
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-5">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Check size={24} className="text-amber-700" />
-                </div>
-                <div className="flex-1">
-                  {isEditingProduct ? (
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={editedProduct}
-                        onChange={(e) => setEditedProduct(e.target.value)}
-                        className="flex-1 px-4 py-3 border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-lg"
-                        placeholder="Enter product name"
-                        autoFocus
-                      />
-                      <button
-                        onClick={() => setIsEditingProduct(false)}
-                        className="px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition flex items-center gap-2 shadow-md"
-                      >
-                        <Check size={18} />
-                        Done
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <p className="text-xs text-amber-700 font-medium mb-1 uppercase tracking-wide">
-                          Product Identified
-                        </p>
-                        <p className="text-xl md:text-2xl font-serif text-amber-900">
-                          {editedProduct}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setIsEditingProduct(true)}
-                        className="px-4 py-2 bg-white border border-amber-300 hover:border-amber-400 text-amber-700 rounded-xl transition flex items-center gap-2 shadow-sm flex-shrink-0"
-                      >
-                        <Edit2 size={16} />
-                        Edit
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={handleGetDeals}
-              disabled={loadingStep === 2}
-              className="w-full bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white font-light py-4 px-6 rounded-xl flex items-center justify-center disabled:opacity-50 transition shadow-lg hover:shadow-xl text-lg"
-            >
-              {loadingStep === 2 ? (
-                <>
-                  <Loader2 size={22} className="animate-spin mr-2" />
-                  Searching Platforms...
-                </>
-              ) : (
-                <>
-                  <Search size={22} className="mr-2" />
-                  Compare Prices Now
-                </>
-              )}
-            </button>
-          </div>
-        )}
-
-        
-
-        {/* Results - Comprehensive Comparison */}
+        {/* Results Section - Only appears below */}
         {comparisonData && getSortedProducts().length > 0 && (
           <div className="bg-white/80 backdrop-blur-sm border border-amber-200/60 rounded-3xl p-6 md:p-8 shadow-lg">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
@@ -423,11 +457,27 @@ export default function Dashboard() {
                     <div className="grid md:grid-cols-12 gap-5 items-center">
                       {/* Platform Logo & Badge */}
                       <div className="md:col-span-2 flex flex-col items-center gap-2">
-                        <img
-                          src={logo}
-                          alt={site}
-                          className="w-20 h-20 object-contain rounded-xl bg-white p-2 shadow-sm border border-stone-200"
-                        />
+                        <div className="w-20 h-20 rounded-xl bg-white p-2 shadow-sm border border-stone-200 flex items-center justify-center relative">
+                          <img
+                            src={logo.src}
+                            alt={site}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              const fallback = e.target.nextSibling;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                          {/* Fallback logo */}
+                          <div 
+                            className={`w-full h-full rounded-lg ${logo.fallbackBg} hidden items-center justify-center`}
+                            style={{display: 'none'}}
+                          >
+                            <span className="text-sm font-bold text-gray-700">
+                              {logo.fallbackText}
+                            </span>
+                          </div>
+                        </div>
                         {isLowest && (
                           <div className="flex items-center gap-1 bg-amber-500 text-white px-3 py-1 rounded-full shadow-md">
                             <Crown size={14} />
@@ -543,7 +593,7 @@ export default function Dashboard() {
                           rel="noopener noreferrer"
                           className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl transition text-sm font-medium shadow-md hover:shadow-lg ${
                             isLowest
-                              ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white"
+                              ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-amber-700 text-white"
                               : "bg-stone-800 hover:bg-stone-900 text-white"
                           }`}
                         >
@@ -625,9 +675,11 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-       <footer className="border-t border-amber-200 bg-amber-100 mt-40">
+      <footer className="border-t border-amber-200 bg-amber-100 mt-40">
         <div className="max-w-7xl mx-auto px-6 py-12 text-center">
-          <p className="text-amber-700 font-light">© 2025 Compario. All rights reserved.</p>
+          <p className="text-amber-700 font-light">
+            © 2025 Compario. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>

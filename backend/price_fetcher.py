@@ -35,8 +35,8 @@ def get_top_deals_from_each_site(product: str, pincode: str = None):
         try:
             print(f"🔍 Scraping Amazon for: {product}")
             data = scrape_amazon_lowest_price(query=product, pincode=pincode, headless=True)
-            if data and not data.get('error'):
-                print(f"✅ Amazon: Found product at ₹{data.get('price', 0)}")
+            if data and not data.get('error') and data.get('price'):
+                print(f"✅ Amazon: Found product at ₹{data.get('price', 0):,}")
                 return ("amazon", data)
             
             error_msg = data.get('error') if data else 'No results'
@@ -49,16 +49,14 @@ def get_top_deals_from_each_site(product: str, pincode: str = None):
             return ("amazon", None)
     
     def scrape_flipkart_wrapper():
-        """Flipkart scraper wrapper - Direct function call"""
+        """Flipkart scraper wrapper"""
         try:
             print(f"🔍 Scraping Flipkart for: {product}")
-            
-            # scrape_flipkart is now a direct function, not a class
             data = scrape_flipkart(query=product, pincode=pincode, headless=True)
             
             # Check for valid data
             if data and isinstance(data, dict) and data.get('price'):
-                print(f"✅ Flipkart: Found product at ₹{data.get('price', 0)}")
+                print(f"✅ Flipkart: Found product at ₹{data.get('price', 0):,}")
                 return ("flipkart", data)
             
             print(f"⚠️ Flipkart: No results found")
@@ -70,16 +68,14 @@ def get_top_deals_from_each_site(product: str, pincode: str = None):
             return ("flipkart", None)
     
     def scrape_snapdeal_wrapper():
-        """Snapdeal scraper wrapper - Direct function call"""
+        """Snapdeal scraper wrapper"""
         try:
             print(f"🔍 Scraping Snapdeal for: {product}")
-            
-            # scrape_snapdeal is now a direct function, not a class
             data = scrape_snapdeal(query=product, pincode=pincode, headless=True)
             
             # Check for valid data
             if data and isinstance(data, dict) and data.get('price'):
-                print(f"✅ Snapdeal: Found product at ₹{data.get('price', 0)}")
+                print(f"✅ Snapdeal: Found product at ₹{data.get('price', 0):,}")
                 return ("snapdeal", data)
             
             print(f"⚠️ Snapdeal: No results found")
@@ -155,11 +151,19 @@ def print_comparison_table(results: dict):
         
         if data:
             price = f"₹{data.get('price', 0):,}"
-            rating = f"{data.get('rating', 'N/A')}"
-            reviews = data.get('reviews', '0')
-            if reviews != 'N/A' and reviews != '0':
+            
+            # Handle rating display
+            rating = data.get('rating', 'N/A')
+            if rating == 'No rating':
+                rating = 'N/A'
+            
+            reviews = data.get('reviews', data.get('review_count', '0'))
+            if reviews and reviews != 'N/A' and reviews != '0' and reviews != 'No rating':
                 rating += f" ({reviews})"
-            delivery = data.get('delivery_date', 'N/A')[:18]
+            
+            delivery = data.get('delivery_date', data.get('delivery_info', 'N/A'))
+            if delivery:
+                delivery = str(delivery)[:18]
             status = "✅ Found"
         else:
             price = "-"
@@ -206,41 +210,93 @@ def print_detailed_results(results: dict):
             print(f"📦 Title: {data.get('title', 'N/A')}")
             print(f"💰 Price: ₹{data.get('price', 0):,}")
             
-            if data.get('original_price') and data['original_price'] > data.get('price', 0):
-                print(f"💸 Original Price: ₹{data['original_price']:,}")
+            # Original price and discount
+            original_price = data.get('original_price', 0)
+            if original_price and original_price > data.get('price', 0):
+                print(f"💸 Original Price: ₹{original_price:,}")
                 
-            if data.get('discount'):
-                print(f"🎁 Discount: {data.get('discount')}")
+            discount = data.get('discount', '')
+            if discount and discount != 'No discount':
+                print(f"🎁 Discount: {discount}")
                 
-            print(f"⭐ Rating: {data.get('rating', 'N/A')}")
+            # Rating and reviews
+            rating = data.get('rating', 'N/A')
+            if rating != 'No rating':
+                print(f"⭐ Rating: {rating}")
             
-            if data.get('reviews'):
-                print(f"📝 Reviews: {data.get('reviews')}")
+            reviews = data.get('reviews', data.get('review_count', ''))
+            if reviews and reviews != '0' and reviews != 'No rating':
+                print(f"📝 Reviews: {reviews}")
             
-            print(f"🚚 Delivery: {data.get('delivery_date', 'N/A')}")
+            # Delivery information
+            delivery_date = data.get('delivery_date', 'N/A')
+            delivery_text = data.get('delivery_text', data.get('delivery_info', ''))
+            print(f"🚚 Delivery: {delivery_date}")
             
-            if data.get('delivery_text'):
-                print(f"   Details: {data.get('delivery_text')}")
+            if delivery_text and delivery_text != delivery_date:
+                print(f"   Details: {delivery_text}")
             
-            if data.get('seller'):
-                print(f"🏪 Seller: {data.get('seller')}")
+            # Seller information
+            seller = data.get('seller', '')
+            if seller and seller != 'N/A':
+                print(f"🏪 Seller: {seller}")
             
-            if data.get('in_stock') is not None:
-                stock_status = "✅ In Stock" if data['in_stock'] else "❌ Out of Stock"
+            # Stock status
+            in_stock = data.get('in_stock')
+            if in_stock is not None:
+                stock_status = "✅ In Stock" if in_stock else "❌ Out of Stock"
                 print(f"📦 Stock: {stock_status}")
             
-            if data.get('highlights'):
-                highlights = data['highlights']
-                if highlights and highlights[0] != "Check product page for details":
-                    print(f"✨ Highlights:")
-                    for i, highlight in enumerate(highlights[:3], 1):
-                        print(f"   {i}. {highlight[:80]}...")
+            # Additional details for Amazon
+            if site == 'amazon':
+                brand = data.get('brand', '')
+                if brand:
+                    print(f"🏷️  Brand: {brand}")
+                
+                features = data.get('features', [])
+                if features:
+                    print(f"✨ Features:")
+                    for i, feature in enumerate(features[:3], 1):
+                        print(f"   {i}. {feature[:80]}{'...' if len(feature) > 80 else ''}")
             
             print(f"🔗 URL: {data.get('url', 'N/A')}")
         else:
             print("❌ No data available")
     
     print(f"\n{'='*100}\n")
+
+
+def get_all_deals_structured(product: str, pincode: str = None):
+    """
+    Get all deals in a structured format for API/UI consumption.
+    Returns: dict with best deal and all deals
+    """
+    results = get_top_deals_from_each_site(product, pincode)
+    
+    # Find best deal
+    valid_results = [(site, data) for site, data in results.items() if data is not None]
+    best_site, best_data = None, None
+    
+    if valid_results:
+        best_site, best_data = min(valid_results, key=lambda x: x[1].get('price', float('inf')))
+    
+    return {
+        "product": product,
+        "pincode": pincode,
+        "best_deal": {
+            "site": best_site,
+            "data": best_data
+        },
+        "all_deals": results,
+        "summary": {
+            "total_sites_searched": 3,
+            "sites_with_results": len(valid_results),
+            "price_range": {
+                "min": min([data.get('price', 0) for site, data in valid_results]) if valid_results else 0,
+                "max": max([data.get('price', 0) for site, data in valid_results]) if valid_results else 0
+            }
+        }
+    }
 
 
 # Example usage
@@ -266,6 +322,8 @@ if __name__ == "__main__":
     if best_site:
         print(f"🎯 RECOMMENDATION: Buy from {best_site.upper()}")
         print(f"💰 Best Price: ₹{best_data.get('price', 0):,}")
+        print(f"📦 Product: {best_data.get('title', 'N/A')}")
+        print(f"🚚 Delivery: {best_data.get('delivery_date', 'N/A')}")
         print(f"🔗 Direct Link: {best_data.get('url', 'N/A')}\n")
     else:
         print("❌ No deals found on any platform\n")

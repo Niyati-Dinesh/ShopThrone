@@ -5,7 +5,7 @@ import io
 # Load the model once when the server starts
 try:
     clf = pipeline("image-classification", model="google/vit-base-patch16-224")
-    print("✅ AI Model loaded successfully.")
+    print("AI Model loaded successfully.")
 except Exception as e:
     print(f"🚨 Could not load AI model: {e}")
     clf = None

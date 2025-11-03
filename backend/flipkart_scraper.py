@@ -46,8 +46,7 @@ def set_pincode(driver, pincode):
     """Set delivery pincode on Flipkart."""
     try:
         print(f"📍 Setting pincode to {pincode}...")
-        
-        # Look for pincode/delivery location elements
+    
         pincode_selectors = [
             "div._2P_LDn input",
             "input[placeholder*='pincode']",

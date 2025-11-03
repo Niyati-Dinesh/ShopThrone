@@ -1,12 +1,14 @@
 import re
 import time
+import tempfile
+import os
+import shutil
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -22,8 +24,11 @@ def clean_price_text(price_text: str) -> int:
     return 0
 
 def setup_driver(headless=True):
-    """Setup Chrome driver with headless option."""
+    """Setup Chrome driver with UNIQUE user data directory"""
     chrome_options = Options()
+    
+    temp_dir = tempfile.mkdtemp(prefix="chrome_snapdeal_")
+    chrome_options.add_argument(f"--user-data-dir={temp_dir}")
     
     if headless:
         chrome_options.add_argument('--headless=new')
@@ -40,6 +45,7 @@ def setup_driver(headless=True):
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    driver.temp_dir = temp_dir  
     
     return driver
 
@@ -72,7 +78,7 @@ def enter_pincode_snapdeal(driver, pincode: str):
     print(f"📍 Setting pincode to {pincode}...")
     time.sleep(2)
     
-    # Method 1: Direct input field
+   
     try:
         pincode_input = WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.ID, "pincode"))
@@ -93,7 +99,6 @@ def enter_pincode_snapdeal(driver, pincode: str):
     except:
         pass
     
-    # Method 2: JavaScript injection
     try:
         driver.execute_script(f"""
             var input = document.getElementById('pincode');
@@ -114,7 +119,6 @@ def enter_pincode_snapdeal(driver, pincode: str):
     except:
         pass
     
-    # Method 3: Click delivery section first
     try:
         delivery_elements = driver.find_elements(By.XPATH, 
             "//*[contains(text(), 'Delivery') or contains(text(), 'Check') or contains(text(), 'Pincode')]")
@@ -191,7 +195,7 @@ def extract_delivery_info(driver, pincode_entered=False):
                 delivery_info['delivery_text'] = f"Expected by {match.group(1)}"
                 return delivery_info
         
-        # If pincode was entered but no specific date found, look for general delivery text
+        # If pincode was entered but no specific date found
         if pincode_entered:
             match = re.search(r'(available for delivery|can be delivered|delivery available)', 
                             page_text, re.IGNORECASE)
@@ -406,43 +410,16 @@ def scrape_snapdeal(query: str, pincode: str = None, headless: bool = True):
     
     finally:
         if driver:
-            driver.quit()
+            try:
+                temp_dir = getattr(driver, 'temp_dir', None)
+                driver.quit()
+                if temp_dir and os.path.exists(temp_dir):
+                    time.sleep(0.5)
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+            except:
+                pass
 
-def print_result(product):
-    """Pretty print the result."""
-    if not product:
-        print("\n❌ No result to display")
-        return
-    
-    print("\n" + "="*60)
-    print("🎯 LOWEST PRICED PRODUCT ON SNAPDEAL")
-    print("="*60)
-    print(f"\n📦 Title: {product['title']}")
-    print(f"💰 Price: ₹{product['price']:,}")
-    
-    if product.get('original_price', 0) > 0:
-        print(f"💸 Original Price: ₹{product['original_price']:,}")
-    
-    print(f"🎁 Discount: {product.get('discount', 'No discount')}")
-    print(f"⭐ Rating: {product.get('rating', 'N/A')} ({product.get('reviews', '0')} reviews)")
-    print(f"🚚 Delivery: {product.get('delivery_date', 'N/A')}")
-    
-    if product.get('delivery_text'):
-        print(f"   Details: {product['delivery_text']}")
-    
-    print(f"🏪 Seller: {product.get('seller', 'N/A')}")
-    print(f"📦 In Stock: {'Yes' if product.get('in_stock', False) else 'Check website'}")
-    print(f"🖼️  Image: {product['image'][:60]}...")
-    print(f"🔗 URL: {product['url']}")
-    print("\n" + "="*60)
-
-
-# RUN IT!
 if __name__ == "__main__":
-    result = scrape_snapdeal(
-        query="vacuum cleaner",
-        pincode="688524",
-        headless=True  # Set to False to see browser
-    )
-    
-    print_result(result)
+    import json
+    result = scrape_snapdeal(query="wireless mouse", pincode="688524", headless=True)
+    print(json.dumps(result, indent=4, ensure_ascii=False))
