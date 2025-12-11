@@ -14,12 +14,11 @@ import dbop
 import models
 import schema as schemas
 
-
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # This "points" to our /api/token endpoint
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
@@ -48,6 +47,42 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+def verify_token(token: str):
+    """
+    Verify any JWT token.
+    Returns payload if valid, None otherwise.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        return None
+
+def verify_admin_token(token: str):
+    """
+    Verify if token is an admin token.
+    Returns payload if valid admin, None otherwise.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        
+        # Check if token has expired
+        exp = payload.get("exp")
+        if exp and datetime.now(timezone.utc) > datetime.fromtimestamp(exp, tz=timezone.utc):
+            print("Admin token expired")
+            return None
+        
+        # Check if it's an admin token
+        is_admin = payload.get("is_admin", False)
+        if not is_admin:
+            print("Not an admin token")
+            return None
+            
+        return payload
+    except JWTError as e:
+        print(f"Admin token verification error: {e}")
+        return None
 
 # --- Dependency to get the current authenticated user ---
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):

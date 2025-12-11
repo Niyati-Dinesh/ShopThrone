@@ -1,7 +1,10 @@
 import { createContext, useState, useEffect } from "react";
 import { jwtDecode } from "jwt-decode";
 import toast from "react-hot-toast";
-import api from "../services/api";
+import api, {
+  requestPasswordReset as apiRequestPasswordReset,
+  resetPassword as apiResetPassword,
+} from "../services/api";
 
 export const AuthContext = createContext();
 
@@ -16,7 +19,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       try {
         const decodedToken = jwtDecode(token);
-        setUser({ email: decodedToken.sub }); // Set authorization header for all future requests
+        setUser({ email: decodedToken.sub });
         api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       } catch (error) {
         console.error("Token decode error:", error);
@@ -28,35 +31,34 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      console.log("🔐 Attempting login for:", email); // --- 🚨 FIX #1 ---
-      // Use URLSearchParams, not FormData. This will send
-      // 'application/x-www-form-urlencoded' data, which OAuth2 expects.
+      console.log("🔐 Attempting login for:", email);
+
       const formData = new URLSearchParams();
       formData.append("username", email);
       formData.append("password", password);
 
-      const response = await fetch("http://localhost:8000/api/token", {
+      const response = await fetch("http://localhost:5555/api/token", {
         method: "POST",
-        body: formData, // --- 🚨 FIX #2 ---
-        // We DON'T need a Content-Type. The browser will automatically
-        // set 'application/x-www-form-urlencoded' because the body
-        // is a URLSearchParams object.
-      }); // --- 🚨 FIX #3 ---
-      // Check for errors *before* trying to parse JSON.
-      // This lets us catch the "Incorrect email or password" message.
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
+        mode: "cors",
+        credentials: "include",
+      });
+
       if (!response.ok) {
-        // Try to get the error detail from FastAPI
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          errorData.detail || `Login failed: ${response.statusText}`
+          errorData.detail || `Login failed (${response.status})`
         );
-      } // Now it's safe to parse the success response
+      }
 
       const data = await response.json();
-
       const { access_token } = data;
+
       localStorage.setItem("token", access_token);
-      setToken(access_token); // Set authorization header for all future requests
+      setToken(access_token);
       api.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
 
       console.log("✅ Login successful");
@@ -64,7 +66,6 @@ export const AuthProvider = ({ children }) => {
       return true;
     } catch (error) {
       console.error("💥 Login error:", error);
-      // This will now correctly show "Incorrect email or password"
       toast.error(error.message || "Login failed");
       return false;
     }
@@ -74,7 +75,7 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log("👤 Attempting signup for:", userData.email);
       const response = await api.post("/users/signup", userData);
-      console.log("✅ Signup successful"); // Auto-login after successful signup
+      console.log("✅ Signup successful");
       const loginSuccess = await login(userData.email, userData.password);
       if (loginSuccess) {
         toast.success("Account created successfully!");
@@ -106,11 +107,41 @@ export const AuthProvider = ({ children }) => {
     toast.success("Logged out successfully!");
   };
 
+  // ✅ FIXED: Using the correctly imported functions
+  const requestPasswordReset = async (email) => {
+    try {
+      const result = await apiRequestPasswordReset(email); // ✅ Now this exists
+      return result;
+    } catch (error) {
+      console.error("Password reset request error:", error);
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email, otp, newPassword) => {
+    try {
+      const result = await apiResetPassword(email, otp, newPassword); // ✅ Now this exists
+      return result;
+    } catch (error) {
+      console.error("Password reset error:", error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ token, user, login, logout, signup, loading }}
+      value={{
+        token,
+        user,
+        login,
+        logout,
+        signup,
+        loading,
+        requestPasswordReset,
+        resetPassword,
+      }}
     >
-            {!loading && children}   {" "}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

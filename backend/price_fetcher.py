@@ -1,129 +1,208 @@
 import concurrent.futures
 import re
-from amazon_scraper import scrape_amazon_lowest_price
-from flipkart_scraper import scrape_flipkart
-from snapdeal_scraper import scrape_snapdeal
+from typing import Dict, Any, Callable, List
 
-def clean_price(price_text):
-    """Extract numeric price from text"""
-    if not price_text:
-        return 0
+# --- IMPORT SCRAPERS ---
+from scraper.amazon_scraper import scrape_amazon_lowest_price
+from scraper.flipkart_scraper import scrape_flipkart
+from scraper.snapdeal_scraper import scrape_snapdeal
+from scraper.reliancedigital_scraper import scrape_reliance_digital_playwright
+from scraper.croma_scraper import scrape_croma
+from scraper.ajio_scraper import scrape_ajio
+
+# --- CATEGORY DEFINITIONS ---
+
+ELECTRONICS_KEYWORDS = {
+    'laptop', 'computer', 'pc', 'monitor', 'tv', 'television', 'led', 'oled',
+    'mobile', 'phone', 'smartphone', 'tablet', 'ipad', 'iphone', 'samsung galaxy',
+    'watch', 'smartwatch', 'band', 'fitbit',
+    'headphone', 'earphone', 'earbud', 'airpod', 'speaker', 'soundbar', 'bluetooth',
+    'camera', 'dslr', 'lens', 'tripod', 'gopro', 'drone',
+    'console', 'playstation', 'ps4', 'ps5', 'xbox', 'nintendo', 'gamepad',
+    'processor', 'gpu', 'graphic', 'cpu', 'motherboard', 'ram', 'memory',
+    'ssd', 'hdd', 'hard drive', 'pendrive', 'usb', 'sd card',
+    'cable', 'charger', 'power bank', 'adapter', 'hub',
+    'fridge', 'refrigerator', 'washing machine', 'washer', 'dryer',
+    'ac', 'air conditioner', 'cooler', 'fan', 'heater', 'geyser',
+    'iron', 'vacuum', 'purifier', 'water purifier',
+    'mixer', 'grinder', 'blender', 'juicer', 'microwave', 'oven', 'toaster', 'kettle','lights','light'
+    'keyboard', 'mouse', 'printer', 'scanner', 'router', 'wifi', 'modem','Smartphones','headphones'
+}
+
+FASHION_KEYWORDS = {
+    'shirt', 't-shirt', 'top', 'tee', 'polo', 'tunic',
+    'jeans', 'pant', 'trouser', 'chinos', 'jogger', 'trackpant', 'short', 'skirt','denim','women','men'
+    'dress', 'gown', 'frock', 'jumpsuit', 'bodysuit',
+    'saree', 'sari', 'kurta', 'kurti', 'lehenga', 'choli', 'dupatta', 'salwar',
+    'jacket', 'coat', 'blazer', 'suit', 'vest', 'waistcoat',
+    'hoodie', 'sweatshirt', 'sweater', 'cardigan', 'pullover',
+    'shoe', 'sneaker', 'boot', 'sandal', 'slipper', 'flip flop', 'heel', 'wedge',
+    'flat', 'loafer', 'moccasin', 'oxford', 'derby', 'brogue',
+    'bag', 'backpack', 'handbag', 'purse', 'clutch', 'tote', 'wallet',
+    'belt', 'tie', 'bow', 'scarf', 'stole', 'shawl',
+    'cap', 'hat', 'beanie',
+    'sunglass', 'spectacle', 'frame',
+    'jewellery', 'necklace', 'earring', 'ring', 'bracelet', 'bangle', 'chain', 'pendant',"perfume","lipstick","blush","gloss ","eyeliner","lashes ","mascara","powder ","highlighter","concealer","foundation","bronzer","moisturizet",'sunscreen'
+}
+
+def determine_category(query: str) -> str:
+    """
+    Analyzes the query string to determine if it is Electronics, Fashion, or General.
+    """
+    q = query.lower()
+    tokens = set(re.findall(r'\w+', q))
+
+    def check_keywords(keywords_set):
+        for k in keywords_set:
+            k_lower = k.lower()
+            if ' ' in k_lower:
+                if k_lower in q:
+                    return True
+            else:
+                if k_lower in tokens:
+                    return True
+        return False
+
+    if check_keywords(ELECTRONICS_KEYWORDS):
+        return "electronics"
     
-    # Remove currency symbols and commas, extract numbers
-    price_match = re.search(r'[\d,]+\.?\d*', str(price_text))
-    if price_match:
-        price_str = price_match.group().replace(',', '')
-        try:
-            return float(price_str)
-        except ValueError:
-            return 0
-    return 0
+    if check_keywords(FASHION_KEYWORDS):
+        return "fashion"
+        
+    return "general"
+
+def get_scrapers_for_query(query: str) -> Dict[str, Callable]:
+    """
+    Returns a dictionary of {site_name: scraper_function} based on the query category.
+    """
+    category = determine_category(query)
+    scrapers = {}
+
+    print(f"🧠 Category detected for '{query}': {category.upper()}")
+
+    # 1. ALWAYS include the giants (Amazon & Flipkart)
+    scrapers['amazon'] = scrape_amazon_lowest_price
+    scrapers['flipkart'] = scrape_flipkart
+
+    # 2. Add category specific scrapers
+    if category == "electronics":
+        scrapers['croma'] = scrape_croma
+        scrapers['reliance'] = scrape_reliance_digital_playwright
+        # Electronics: exclude Snapdeal
+        if 'snapdeal' in scrapers:
+            del scrapers['snapdeal']
+        
+    elif category == "fashion":
+        scrapers['ajio'] = scrape_ajio
+        scrapers['snapdeal'] = scrape_snapdeal
+        # Fashion: exclude Croma and Reliance
+        if 'croma' in scrapers:
+            del scrapers['croma']
+        if 'reliance' in scrapers:
+            del scrapers['reliance']
+        
+    else:
+        # General/Other category
+        scrapers['snapdeal'] = scrape_snapdeal
+
+    return scrapers
+
+def is_result_relevant(query: str, title: str) -> bool:
+    """
+    Basic check to warn if the found product title seems irrelevant.
+    """
+    if not title:
+        return False
+        
+    q_tokens = set(re.findall(r'\w+', query.lower()))
+    t_tokens = set(re.findall(r'\w+', title.lower()))
+    
+    stop_words = {'buy', 'online', 'best', 'price', 'in', 'india', 'mens', 'womens', 'cheap', 'product'}
+    q_tokens = q_tokens - stop_words
+    
+    if not q_tokens:
+        return True 
+        
+    overlap = q_tokens.intersection(t_tokens)
+    return len(overlap) > 0
+
+# --- MAIN FETCHING LOGIC ---
 
 def get_top_deals_from_each_site(product: str, pincode: str = None):
     """
-    Fetches the lowest price deal WITH FULL DETAILS from each platform.
-    Returns: dict with detailed product info from each site
+    Fetches the lowest price deal WITH FULL DETAILS from relevant platforms only.
+    Returns a dictionary with ALL scrapers that were attempted.
     """
-    results = {
-        "amazon": None,
-        "flipkart": None,
-        "snapdeal": None
-    }
+    results = {}
     
-    def scrape_amazon_wrapper():
-        """Amazon scraper wrapper"""
+    # 1. Get the list of relevant scrapers based on category
+    selected_scrapers = get_scrapers_for_query(product)
+    print(f"🚀 Activating scrapers: {', '.join(selected_scrapers.keys()).upper()}")
+    
+    # 2. Initialize results dict with all possible scrapers
+    all_possible_sites = ['amazon', 'flipkart', 'snapdeal', 'croma', 'reliance', 'ajio']
+    for site in all_possible_sites:
+        results[site] = None  # Initialize all to None
+
+    # 3. Define the wrapper function for threading
+    def run_scraper(site_name, scraper_func):
         try:
-            print(f"🔍 Scraping Amazon for: {product}")
-            data = scrape_amazon_lowest_price(query=product, pincode=pincode, headless=True)
+            print(f"🔍 Scraping {site_name.capitalize()} for: {product}")
+            
+            # Call scraper
+            data = scraper_func(query=product, pincode=pincode, headless=True)
+            
+            # Validate Result
             if data and not data.get('error') and data.get('price'):
-                print(f"✅ Amazon: Found product at ₹{data.get('price', 0):,}")
-                return ("amazon", data)
+                if not is_result_relevant(product, data.get('title', '')):
+                     print(f"⚠️ {site_name.capitalize()}: Found result '{data.get('title')[:30]}...' but might be irrelevant.")
+                
+                print(f"✅ {site_name.capitalize()}: Found product at ₹{data.get('price', 0):,}")
+                return (site_name, data)
             
-            error_msg = data.get('error') if data else 'No results'
-            print(f"⚠️ Amazon: {error_msg}")
-            return ("amazon", None)
+            # Handle empty results
+            err = data.get('error') if data else 'No results found'
+            print(f"⚠️ {site_name.capitalize()}: {err}")
+            return (site_name, None)
+            
         except Exception as e:
-            print(f"❌ Amazon error: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return ("amazon", None)
-    
-    def scrape_flipkart_wrapper():
-        """Flipkart scraper wrapper"""
-        try:
-            print(f"🔍 Scraping Flipkart for: {product}")
-            data = scrape_flipkart(query=product, pincode=pincode, headless=True)
-            
-            # Check for valid data
-            if data and isinstance(data, dict) and data.get('price'):
-                print(f"✅ Flipkart: Found product at ₹{data.get('price', 0):,}")
-                return ("flipkart", data)
-            
-            print(f"⚠️ Flipkart: No results found")
-            return ("flipkart", None)
-        except Exception as e:
-            print(f"❌ Flipkart error: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return ("flipkart", None)
-    
-    def scrape_snapdeal_wrapper():
-        """Snapdeal scraper wrapper"""
-        try:
-            print(f"🔍 Scraping Snapdeal for: {product}")
-            data = scrape_snapdeal(query=product, pincode=pincode, headless=True)
-            
-            # Check for valid data
-            if data and isinstance(data, dict) and data.get('price'):
-                print(f"✅ Snapdeal: Found product at ₹{data.get('price', 0):,}")
-                return ("snapdeal", data)
-            
-            print(f"⚠️ Snapdeal: No results found")
-            return ("snapdeal", None)
-        except Exception as e:
-            print(f"❌ Snapdeal error: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return ("snapdeal", None)
-    
-    # Run all scrapers in parallel
+            print(f"❌ {site_name.capitalize()} error: {str(e)}")
+            return (site_name, None)
+
+    # 4. Run in parallel only for selected scrapers
     print(f"\n{'='*60}")
     print(f"🚀 Starting parallel scraping for: {product}")
     if pincode:
         print(f"📍 Using pincode: {pincode}")
     print(f"{'='*60}\n")
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        futures = [
-            executor.submit(scrape_amazon_wrapper),
-            executor.submit(scrape_flipkart_wrapper),
-            executor.submit(scrape_snapdeal_wrapper)
-        ]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(selected_scrapers)) as executor:
+        futures = []
+        for site, func in selected_scrapers.items():
+            futures.append(executor.submit(run_scraper, site, func))
         
         for future in concurrent.futures.as_completed(futures):
             try:
                 site, data = future.result()
                 results[site] = data
             except Exception as e:
-                print(f"❌ Error in scraper: {str(e)}")
+                print(f"❌ Error in thread execution: {str(e)}")
     
     # Summary
     successful_sites = sum(1 for v in results.values() if v is not None)
     print(f"\n{'='*60}")
-    print(f"🎯 Scraping complete. Results: {successful_sites}/3 sites found products")
+    print(f"🎯 Scraping complete. Results: {successful_sites}/{len(selected_scrapers)} sites found products")
     print(f"{'='*60}\n")
     
     return results
 
-
 def get_best_deal(product: str, pincode: str = None):
     """
     Get the best deal across all platforms.
-    Returns: tuple of (site_name, product_data)
     """
     results = get_top_deals_from_each_site(product, pincode)
     
-    # Filter out None results and find minimum price
+    # Filter out None values
     valid_results = [(site, data) for site, data in results.items() if data is not None]
     
     if not valid_results:
@@ -134,196 +213,37 @@ def get_best_deal(product: str, pincode: str = None):
     
     return best_site, best_data
 
-
-def print_comparison_table(results: dict):
-    """Pretty print comparison table of all results"""
-    print("\n" + "="*100)
-    print("📊 PRICE COMPARISON TABLE")
-    print("="*100)
-    
-    # Header
-    print(f"{'Platform':<15} {'Price':<12} {'Rating':<10} {'Delivery':<20} {'Status':<15}")
-    print("-"*100)
-    
-    # Data rows
-    for site, data in results.items():
-        site_name = site.upper()
-        
-        if data:
-            price = f"₹{data.get('price', 0):,}"
-            
-            # Handle rating display
-            rating = data.get('rating', 'N/A')
-            if rating == 'No rating':
-                rating = 'N/A'
-            
-            reviews = data.get('reviews', data.get('review_count', '0'))
-            if reviews and reviews != 'N/A' and reviews != '0' and reviews != 'No rating':
-                rating += f" ({reviews})"
-            
-            delivery = data.get('delivery_date', data.get('delivery_info', 'N/A'))
-            if delivery:
-                delivery = str(delivery)[:18]
-            status = "✅ Found"
-        else:
-            price = "-"
-            rating = "-"
-            delivery = "-"
-            status = "❌ No results"
-        
-        print(f"{site_name:<15} {price:<12} {rating:<10} {delivery:<20} {status:<15}")
-    
-    print("="*100)
-    
-    # Find and highlight best deal
-    valid_results = [(site, data) for site, data in results.items() if data is not None]
-    if valid_results:
-        best_site, best_data = min(valid_results, key=lambda x: x[1].get('price', float('inf')))
-        print(f"\n🏆 BEST DEAL: {best_site.upper()} at ₹{best_data.get('price', 0):,}")
-        
-        # Calculate savings
-        prices = [data.get('price', 0) for site, data in valid_results]
-        max_price = max(prices)
-        min_price = min(prices)
-        if max_price > min_price:
-            savings = max_price - min_price
-            savings_percent = (savings / max_price) * 100
-            print(f"💰 SAVE: ₹{savings:,} ({savings_percent:.1f}% off)")
-        
-        print(f"🔗 URL: {best_data.get('url', 'N/A')}")
-    
-    print("="*100 + "\n")
-
-
-def print_detailed_results(results: dict):
-    """Print detailed information for each platform"""
-    print("\n" + "="*100)
-    print("📋 DETAILED RESULTS FROM ALL PLATFORMS")
-    print("="*100)
-    
-    for site, data in results.items():
-        print(f"\n{'─'*100}")
-        print(f"🏪 {site.upper()}")
-        print(f"{'─'*100}")
-        
-        if data:
-            print(f"📦 Title: {data.get('title', 'N/A')}")
-            print(f"💰 Price: ₹{data.get('price', 0):,}")
-            
-            # Original price and discount
-            original_price = data.get('original_price', 0)
-            if original_price and original_price > data.get('price', 0):
-                print(f"💸 Original Price: ₹{original_price:,}")
-                
-            discount = data.get('discount', '')
-            if discount and discount != 'No discount':
-                print(f"🎁 Discount: {discount}")
-                
-            # Rating and reviews
-            rating = data.get('rating', 'N/A')
-            if rating != 'No rating':
-                print(f"⭐ Rating: {rating}")
-            
-            reviews = data.get('reviews', data.get('review_count', ''))
-            if reviews and reviews != '0' and reviews != 'No rating':
-                print(f"📝 Reviews: {reviews}")
-            
-            # Delivery information
-            delivery_date = data.get('delivery_date', 'N/A')
-            delivery_text = data.get('delivery_text', data.get('delivery_info', ''))
-            print(f"🚚 Delivery: {delivery_date}")
-            
-            if delivery_text and delivery_text != delivery_date:
-                print(f"   Details: {delivery_text}")
-            
-            # Seller information
-            seller = data.get('seller', '')
-            if seller and seller != 'N/A':
-                print(f"🏪 Seller: {seller}")
-            
-            # Stock status
-            in_stock = data.get('in_stock')
-            if in_stock is not None:
-                stock_status = "✅ In Stock" if in_stock else "❌ Out of Stock"
-                print(f"📦 Stock: {stock_status}")
-            
-            # Additional details for Amazon
-            if site == 'amazon':
-                brand = data.get('brand', '')
-                if brand:
-                    print(f"🏷️  Brand: {brand}")
-                
-                features = data.get('features', [])
-                if features:
-                    print(f"✨ Features:")
-                    for i, feature in enumerate(features[:3], 1):
-                        print(f"   {i}. {feature[:80]}{'...' if len(feature) > 80 else ''}")
-            
-            print(f"🔗 URL: {data.get('url', 'N/A')}")
-        else:
-            print("❌ No data available")
-    
-    print(f"\n{'='*100}\n")
-
-
 def get_all_deals_structured(product: str, pincode: str = None):
     """
     Get all deals in a structured format for API/UI consumption.
-    Returns: dict with best deal and all deals
     """
     results = get_top_deals_from_each_site(product, pincode)
     
-    # Find best deal
+    # Filter out None values
     valid_results = [(site, data) for site, data in results.items() if data is not None]
     best_site, best_data = None, None
     
     if valid_results:
         best_site, best_data = min(valid_results, key=lambda x: x[1].get('price', float('inf')))
     
+    # Calculate price range from valid results only
+    prices = [data.get('price', 0) for site, data in valid_results]
+    
     return {
         "product": product,
         "pincode": pincode,
+        "category_detected": determine_category(product),
         "best_deal": {
             "site": best_site,
             "data": best_data
         },
         "all_deals": results,
         "summary": {
-            "total_sites_searched": 3,
+            "total_sites_searched": len(results),
             "sites_with_results": len(valid_results),
             "price_range": {
-                "min": min([data.get('price', 0) for site, data in valid_results]) if valid_results else 0,
-                "max": max([data.get('price', 0) for site, data in valid_results]) if valid_results else 0
+                "min": min(prices) if prices else 0,
+                "max": max(prices) if prices else 0
             }
         }
     }
-
-
-# Example usage
-if __name__ == "__main__":
-    # Test with a product search
-    product = "wireless mouse"
-    pincode = "688524"
-    
-    print(f"\n🔍 Searching for: {product}")
-    print(f"📍 Delivery to: {pincode}\n")
-    
-    # Get results from all platforms
-    results = get_top_deals_from_each_site(product=product, pincode=pincode)
-    
-    # Print comparison table
-    print_comparison_table(results)
-    
-    # Print detailed results
-    print_detailed_results(results)
-    
-    # Get best deal
-    best_site, best_data = get_best_deal(product=product, pincode=pincode)
-    if best_site:
-        print(f"🎯 RECOMMENDATION: Buy from {best_site.upper()}")
-        print(f"💰 Best Price: ₹{best_data.get('price', 0):,}")
-        print(f"📦 Product: {best_data.get('title', 'N/A')}")
-        print(f"🚚 Delivery: {best_data.get('delivery_date', 'N/A')}")
-        print(f"🔗 Direct Link: {best_data.get('url', 'N/A')}\n")
-    else:
-        print("❌ No deals found on any platform\n")

@@ -1,1 +1,4 @@
 .venv
+#uvicorn main:app --reload --host 0.0.0.0 --port 5555                                                
+
+Niyati Dinesh Bhat_Price comparison across ecommerce sites.docx

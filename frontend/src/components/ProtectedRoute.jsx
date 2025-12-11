@@ -1,9 +1,9 @@
-import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 export default function ProtectedRoute({ children }) {
-  const { token, loading } = useAuth()
-  const location = useLocation()
+  const { token, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -14,15 +14,17 @@ export default function ProtectedRoute({ children }) {
             <div className="absolute inset-0 border-2 border-transparent border-t-stone-800 border-r-stone-800 animate-spin"></div>
           </div>
           <h2 className="font-serif text-2xl text-stone-800 mb-2">Loading</h2>
-          <p className="text-stone-500 text-sm font-light tracking-wide">Please wait while we verify your access</p>
+          <p className="text-stone-500 text-sm font-light tracking-wide">
+            Please wait while we verify your access
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!token) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  return children
+  return children;
 }

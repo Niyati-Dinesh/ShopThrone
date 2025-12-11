@@ -1,137 +1,149 @@
-import { Sparkles, Zap, Shield, Users, CheckCircle, Crown, Camera, Search, DollarSign } from "lucide-react"
+import { Zap, Globe, Search, ArrowRight, Sparkles, Lock } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function About() {
-  const values = [
-    {
-      icon: Zap,
-      title: "Innovation",
-      description: "Cutting-edge AI technology for instant product recognition",
-      image: "/innovation.jpg"
-    },
-    {
-      icon: Shield,
-      title: "Trust",
-      description: "Verified retailers and authentic product data only",
-      image: "/trust1.jpg"
-    },
-    {
-      icon: Users,
-      title: "Community",
-      description: "Built for smart shoppers who value their money",
-      image: "/community.jpg"
-    }
-  ]
-
-  const process = [
-    { step: "01", icon: Camera, title: "Upload", description: "Snap or upload product image" },
-    { step: "02", icon: Search, title: "Identify", description: "AI recognizes the product" },
-    { step: "03", icon: DollarSign, title: "Compare", description: "See prices across retailers" },
-    { step: "04", icon: Crown, title: "Save", description: "Choose the best deal" }
-  ]
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-rose-50">
-      
-
-      {/* Hero */}
-      <section className="pt-32 pb-20 bg-gradient-to-br from-amber-100 to-rose-50">
-        <div className="max-w-5xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100/50 rounded-full border border-amber-200 mb-6">
-            <Sparkles size={16} className="text-amber-700" />
-            <span className="text-amber-900 text-xs font-medium tracking-wide">ABOUT COMPARIO</span>
+    <div className="min-h-screen bg-[var(--bg-primary)] pt-20">
+      {/* Hero Section */}
+      <section className="max-w-7xl mx-auto px-6 py-32">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-8 bg-[var(--accent-primary)] rounded-full"></div>
+                <span className="text-sm tracking-widest uppercase font-light text-[var(--accent-primary)]">
+                  About ShopThrone
+                </span>
+              </div>
+              <h1 className="text-6xl lg:text-7xl font-light leading-tight text-[var(--text-primary)]">
+                Smart Shopping
+                <br />
+                <span className="text-[var(--accent-primary)]">Reimagined</span>
+              </h1>
+            </div>
+            <p className="text-xl font-light text-[var(--text-secondary)] leading-relaxed max-w-lg">
+              We believe finding the perfect product at the best price should be
+              effortless. ShopThrone empowers millions of shoppers with
+              intelligent, real-time price comparisons.
+            </p>
+            <Link to="/dashboard">
+              <button className="inline-flex items-center gap-3 px-8 py-4 bg-[var(--accent-primary)] text-white rounded-sm hover:shadow-lg transition-all font-light">
+                <Search size={20} strokeWidth={1.5} />
+                Start Comparing
+                <ArrowRight size={18} strokeWidth={1.5} />
+              </button>
+            </Link>
           </div>
-          
-          <h1 className="font-serif text-5xl md:text-6xl text-amber-900 mb-6">
-            Revolutionizing Smart Shopping
-          </h1>
-          <p className="text-amber-700 text-xl max-w-3xl mx-auto leading-relaxed">
-            Making price comparison effortless through AI and computer vision
-          </p>
+
+          {/* Hero Image */}
+          <div className="relative aspect-square rounded-sm overflow-hidden shadow-2xl">
+            <img
+              src="/about 1 (2).jpg"
+              alt="Shopping made easy"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+          </div>
         </div>
       </section>
 
-      {/* Mission */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="font-serif text-4xl text-amber-900 mb-6">Our Mission</h2>
-              <p className="text-amber-700 text-lg leading-relaxed mb-8">
-                At Compario, we believe finding the best price should be as simple as taking a picture. 
-                We're democratizing smart shopping through AI-powered visual search.
-              </p>
+      {/* Mission Section */}
+      <section className="bg-[var(--bg-secondary)] py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-12 items-start">
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-5xl font-light mb-6 text-[var(--text-primary)]">
+                  Our Mission
+                </h2>
+                <p className="text-lg font-light text-[var(--text-secondary)] leading-relaxed">
+                  At ShopThrone, we empower shoppers with intelligence. Our
+                  mission is to eliminate the friction from price comparison by
+                  leveraging cutting-edge technology to deliver real-time,
+                  accurate pricing across India's leading e-commerce platforms.
+                </p>
+              </div>
+
               <div className="space-y-4">
                 {[
-                  'AI-Powered Visual Search',
-                  'Real-time Price Comparison',
-                  'Trusted Retailer Network',
-                  'User-First Design'
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <CheckCircle size={20} className="text-green-600 flex-shrink-0" />
-                    <span className="text-amber-800">{item}</span>
+                  { icon: Sparkles, text: "Real-time price intelligence" },
+                  { icon: Globe, text: "Multi-platform comparison" },
+                  { icon: Lock, text: "Verified seller data" },
+                  { icon: Zap, text: "Lightning-fast results" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-4 group">
+                    <div className="w-12 h-12 bg-[var(--accent-primary)]/10 rounded-full flex items-center justify-center group-hover:bg-[var(--accent-primary)]/20 transition-all">
+                      <item.icon
+                        size={20}
+                        className="text-[var(--accent-primary)]"
+                        strokeWidth={1.5}
+                      />
+                    </div>
+                    <span className="text-lg font-light text-[var(--text-primary)]">
+                      {item.text}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="relative">
-              <img 
-                src="/about1 (2).jpg"
-                alt="Technology"
-                className="rounded-2xl shadow-2xl"
+
+            {/* Mission Image */}
+            <div className="relative aspect-square rounded-sm overflow-hidden shadow-xl">
+              <img
+                src="/about2.jpg"
+                alt="Our team"
+                className="w-full h-full object-cover"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Process */}
-      <section className="py-20 bg-amber-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="font-serif text-4xl text-amber-900 mb-4">How It Works</h2>
-            <p className="text-amber-600">Simple steps to smart savings</p>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-6">
-            {process.map((item, index) => (
-              <div key={index} className="bg-white rounded-2xl p-6 text-center hover:shadow-lg transition-all border border-amber-200">
-                <div className="text-amber-200 text-5xl font-serif mb-4">{item.step}</div>
-                <div className="w-14 h-14 bg-amber-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <item.icon size={24} />
-                </div>
-                <h3 className="font-serif text-lg text-amber-900 mb-2">{item.title}</h3>
-                <p className="text-amber-700 text-sm">{item.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Values */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="font-serif text-4xl text-amber-900 mb-4">Our Values</h2>
-            <p className="text-amber-600">What drives us forward</p>
+      {/* Why Choose Section */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-5xl font-light mb-6 text-[var(--text-primary)]">
+              Why ShopThrone
+            </h2>
+            <p className="text-xl font-light text-[var(--text-secondary)] max-w-2xl mx-auto">
+              Experience the future of smart shopping with our intelligent
+              platform
+            </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {values.map((value, index) => (
-              <div key={index} className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl overflow-hidden hover:shadow-xl transition-all group border border-amber-200">
-                <div className="h-48 overflow-hidden">
-                  <img 
-                    src={value.image}
-                    alt={value.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                <div className="p-6">
-                  <div className="w-12 h-12 bg-amber-600 text-white rounded-xl flex items-center justify-center mb-4">
-                    <value.icon size={22} />
+            {[
+              {
+                number: "01",
+                title: "Instant Comparison",
+                desc: "Compare prices from Amazon, Flipkart, Snapdeal in just 2 seconds",
+              },
+              {
+                number: "02",
+                title: "Verified Pricing",
+                desc: "Real-time, verified data directly from retailer websites",
+              },
+              {
+                number: "03",
+                title: "Smart Sorting",
+                desc: "Sort by price, rating, delivery time, and more",
+              },
+            ].map((feature, i) => (
+              <div key={i} className="group">
+                <div className="bg-[var(--bg-secondary)] rounded-sm p-8 border border-[var(--border-color)] hover:border-[var(--accent-primary)] h-full transition-all duration-300 space-y-6">
+                  <div className="text-6xl font-light text-[var(--accent-primary)]/30 group-hover:text-[var(--accent-primary)]/50 transition-all">
+                    {feature.number}
                   </div>
-                  <h3 className="font-serif text-xl text-amber-900 mb-3">{value.title}</h3>
-                  <p className="text-amber-700 text-sm leading-relaxed">{value.description}</p>
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-light text-[var(--text-primary)]">
+                      {feature.title}
+                    </h3>
+                    <p className="font-light text-[var(--text-secondary)] leading-relaxed">
+                      {feature.desc}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -139,46 +151,45 @@ export default function About() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-20 bg-gradient-to-r from-amber-900 to-rose-900">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-12 text-center">
-            <div>
-              <div className="text-5xl font-serif text-amber-100 mb-2">50K+</div>
-              <div className="text-amber-200">Happy Shoppers</div>
-            </div>
-            <div>
-              <div className="text-5xl font-serif text-amber-100 mb-2">₹2Cr+</div>
-              <div className="text-amber-200">Total Savings</div>
-            </div>
-            <div>
-              <div className="text-5xl font-serif text-amber-100 mb-2">99%</div>
-              <div className="text-amber-200">Accuracy Rate</div>
-            </div>
+      {/* Stats Section */}
+      <section className="bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-dark)] py-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-4 gap-8 text-center">
+            {[
+              { number: "100K+", label: "Products Compared" },
+              { number: "50K+", label: "Active Users" },
+              { number: "₹50Cr+", label: "Saved by Users" },
+              { number: "99.8%", label: "Data Accuracy" },
+            ].map((stat, i) => (
+              <div key={i} className="space-y-2">
+                <div className="text-4xl font-light text-white">
+                  {stat.number}
+                </div>
+                <p className="text-white/80 font-light">{stat.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-24 bg-white">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="font-serif text-5xl text-amber-900 mb-6">Ready to Join?</h2>
-          <p className="text-amber-600 text-lg mb-8 max-w-2xl mx-auto">
-            Experience the future of price comparison today
+      {/* CTA Section */}
+      <section className="py-24">
+        <div className="max-w-2xl mx-auto px-6 text-center space-y-8">
+          <h2 className="text-5xl font-light text-[var(--text-primary)]">
+            Ready to Save More?
+          </h2>
+          <p className="text-xl font-light text-[var(--text-secondary)]">
+            Join thousands of smart shoppers who use ShopThrone to find the best
+            deals
           </p>
-          <button className="inline-flex items-center gap-2 px-10 py-5 bg-amber-600 text-white hover:bg-amber-700 transition-all duration-300 rounded-full">
-            <DollarSign size={20} />
-            <span className="font-medium">Start Saving Now</span>
-          </button>
+          <Link to="/dashboard">
+            <button className="inline-flex items-center gap-3 px-10 py-4 bg-[var(--accent-primary)] text-white rounded-sm hover:shadow-lg transition-all font-light">
+              Start Shopping Smart
+              <ArrowRight size={20} strokeWidth={1.5} />
+            </button>
+          </Link>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-amber-200 bg-amber-100 py-8">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-amber-700 text-sm">© 2025 Compario. All rights reserved.</p>
-        </div>
-      </footer>
     </div>
-  )
+  );
 }
