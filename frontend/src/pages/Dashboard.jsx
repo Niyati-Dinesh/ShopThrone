@@ -285,7 +285,7 @@ export default function LuxuryDashboard() {
   };
 
   const handleIdentifyProduct = async (file) => {
-    /*setIsIdentifying(true);
+    setIsIdentifying(true);
     setShowProductCard(false);
 
     try {
@@ -299,12 +299,11 @@ export default function LuxuryDashboard() {
       console.error("Image identification failed:", error);
       toast.error("Failed to identify product");
     }
-    setIsIdentifying(false);*/
-    toast.error(" Our AI model is on vacation! It needs too much space on Render and the admin is too broke to pay for it. Use text search instead - it works perfectly! ");
+    setIsIdentifying(false);
   };
 
   const handleImageSearch = async () => {
-    /*if (!identifiedProduct.trim()) return;
+    if (!identifiedProduct.trim()) return;
 
     setIsLoading(true);
     setShowProductCard(false);
@@ -323,8 +322,7 @@ export default function LuxuryDashboard() {
       console.error("Failed to fetch deals:", error);
       toast.error("Failed to fetch prices");
     }
-    setIsLoading(false);*/
-     toast(" Our AI model is on vacation! It needs too much space on Render and the admin is too broke to pay for it. Use text search instead - it works perfectly! ");
+    setIsLoading(false);
   };
 
   const handleManualSearch = async () => {
@@ -342,7 +340,7 @@ export default function LuxuryDashboard() {
       const deals = await getDeals(searchQuery, 0, pincode);
       setComparisonData(deals);
       loadRecentStats();
-      toast.success("Comparison ready!");
+      toast.success("Comparison ready! 🎉");
     } catch (error) {
       console.error("Search failed:", error);
       toast.error("Failed to fetch prices");

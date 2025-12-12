@@ -11,8 +11,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 
 
-from langchain_core.runnables import RunnableMap, RunnableLambda,RunnableConfig,Runnable
-
+from langchain_core.runnables import Runnable
 
 
 PLACEHOLDER_IMAGE = "https://placehold.co/300x400/EEE/31343C?text=No+Image"
