@@ -116,6 +116,16 @@ def init_db_schema():
         updated_by INTEGER
     );
 
+    -- Fix password_reset_tokens table - add email column
+    DO $$
+    BEGIN
+        -- Add email column if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'password_reset_tokens' AND column_name = 'email') THEN
+            ALTER TABLE password_reset_tokens ADD COLUMN email VARCHAR(255);
+        END IF;
+    END $$;
+
     -- Insert default settings
     INSERT INTO system_settings (key, value) VALUES
         ('registration_enabled', 'true'),
@@ -140,7 +150,6 @@ def init_db_schema():
             print("✅ Database schema initialized successfully")
     except Exception as e:
         print(f"❌ Error initializing database schema: {e}")
-
 
 def get_admin_payload(authorization: str = Header(None)) -> dict:
     """Extract and verify admin token from authorization header"""

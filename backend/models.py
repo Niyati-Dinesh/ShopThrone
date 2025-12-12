@@ -83,15 +83,13 @@ class PasswordResetToken(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    token = Column(String, nullable=False, unique=True, index=True)
+    email = Column(String(255), nullable=False) 
+    token = Column(String(255), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     used = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Add email field since it's used in your dbop.py
-    email = Column(String, nullable=True)  # <-- ADD THIS LINE
-
-    user = relationship("User", back_populates="password_reset_tokens")
+    user = relationship("User")
 
     def __repr__(self):
         return f"<PasswordResetToken(id={self.id}, user_id={self.user_id}, email={self.email})>"
