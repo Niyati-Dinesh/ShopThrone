@@ -118,7 +118,7 @@ export default function About() {
               {
                 number: "01",
                 title: "Instant Comparison",
-                desc: "Compare prices from Amazon, Flipkart, Snapdeal in just 2 seconds",
+                desc: "Compare prices from Amazon, Flipkart, Snapdeal in just 30 seconds",
               },
               {
                 number: "02",

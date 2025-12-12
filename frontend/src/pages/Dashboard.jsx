@@ -588,7 +588,7 @@ export default function LuxuryDashboard() {
       const result = await submitFeedback(feedbackData);
 
       if (result.success) {
-        toast.success("Thank you for your feedback! Email sent successfully.");
+        toast.success("Thank you for your feedback!");
 
         // Reset form
         setFeedback({

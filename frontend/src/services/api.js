@@ -71,18 +71,30 @@ export const uploadImage = async (file) => {
   return response.data;
 };
 
-export const saveManualSearch = async (query) => {
-  const formData = new URLSearchParams();
-  formData.append("query", query);
-
-  console.log("💾 Saving manual search:", query);
+export const saveManualSearch = async (query, prices = null) => {
+  console.log("💾 Saving manual search:", query, "with prices:", prices);
 
   try {
-    const response = await api.post("/search/manual", formData, {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
+    let response;
+
+    if (prices) {
+      // Save with prices directly
+      const searchData = {
+        query,
+        ...prices,
+      };
+      response = await api.post("/search/manual-with-prices", searchData);
+    } else {
+      // Save just the query
+      const formData = new URLSearchParams();
+      formData.append("query", query);
+      response = await api.post("/search/manual", formData, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+    }
+
     console.log("✅ Manual search saved:", response.data);
     return response.data;
   } catch (error) {
@@ -97,11 +109,31 @@ export const getDeals = async (product, searchId = 0, pincode = null) => {
 
   console.log("🔍 Fetching deals for:", product, "searchId:", searchId);
 
-  const response = await api.get("/search/deals", { params });
-  return response.data;
-};
+  try {
+    const response = await api.get("/search/deals", { params });
 
-// Forgot Password API functions
+    // Extract prices from deals response
+    const prices = {
+      amazon_price: response.data?.amazon?.price || null,
+      flipkart_price: response.data?.flipkart?.price || null,
+      snapdeal_price: response.data?.snapdeal?.price || null,
+      croma_price: response.data?.croma?.price || null,
+      reliance_price: response.data?.reliance?.price || null,
+      ajio_price: response.data?.ajio?.price || null,
+    };
+
+    // If this is a manual search (searchId = 0), save with prices
+    if (searchId === 0) {
+      console.log("💾 Saving manual search with prices...");
+      await saveManualSearch(product, prices);
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error fetching deals:", error);
+    throw error;
+  }
+};
 export const requestPasswordReset = async (email) => {
   console.log("🔐 Requesting password reset for:", email);
 
@@ -114,7 +146,6 @@ export const requestPasswordReset = async (email) => {
     throw error;
   }
 };
-
 export const resetPassword = async (email, otp, newPassword) => {
   console.log("🔄 Resetting password for:", email);
 

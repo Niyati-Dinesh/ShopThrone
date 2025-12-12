@@ -12,7 +12,8 @@
     --text-tertiary: #8b7d6b; /* Warm gray - Muted text */
     --border-color: #e3ddd4;
     /* Sophisticated burgundy/maroon accents */
-    --accent-primary: #6b2d3d; /* Deep burgundy - Primary buttons */
+    --accent-primary: #6b2d3d;
+    --accent-secondary: #6b2d3d; /* Deep burgundy - Primary buttons */
     --accent-light: #520c2b; /* Rose burgundy - Subtle highlights */
     --accent-dark: #4a1f2c; /* Dark maroon - Dark accent */
     --accent-hover: #8b3d52; /* Hover state */
@@ -36,7 +37,9 @@
 
     --border-color: #3a342e;
     /* Same burgundy accents as light mode */
-    --accent-primary: #9d5666; /* Lighter burgundy for dark bg - Still deep burgundy family */
+    --accent-primary: #9d5666; /* Lighter burgundy for dark bg - Still deep
+    burgundy family */
+    --accent-secondary: #4f2b34;
     --accent-light: #b47689; /* Lighter rose burgundy */
     --accent-dark: #7a4452; /* Deeper burgundy */
     --accent-hover: #b36678; /* Hover burgundy */

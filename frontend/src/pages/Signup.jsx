@@ -525,7 +525,7 @@ export default function Signup() {
                     Already have an account?{" "}
                     <Link
                       to="/login"
-                      className="text-[var(--accent-primary)] hover:text-[var(--accent-hover)] font-medium transition-colors"
+                      className="text-[var(--accent-secondary)] hover:text-[var(--accent-hover)] font-medium transition-colors"
                     >
                       Sign In
                     </Link>
@@ -536,14 +536,14 @@ export default function Signup() {
                   By creating an account, you agree to our{" "}
                   <a
                     href="#"
-                    className="text-[var(--accent-primary)] hover:underline"
+                    className="text-[var(--accent-secondary)] hover:underline"
                   >
                     Terms of Service
                   </a>{" "}
                   and{" "}
                   <a
                     href="#"
-                    className="text-[var(--accent-primary)] hover:underline"
+                    className="text-[var(--accent-secondary)] hover:underline"
                   >
                     Privacy Policy
                   </a>

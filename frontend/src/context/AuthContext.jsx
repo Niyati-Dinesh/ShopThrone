@@ -107,11 +107,11 @@ export const AuthProvider = ({ children }) => {
     toast.success("Logged out successfully!");
   };
 
-  // ✅ FIXED: Using the correctly imported functions
+
   const requestPasswordReset = async (email) => {
     try {
-      const result = await apiRequestPasswordReset(email); // ✅ Now this exists
-      return result;
+      const response = await api.post("/auth/reset-request", { email });
+      return response.data;
     } catch (error) {
       console.error("Password reset request error:", error);
       throw error;

@@ -534,7 +534,7 @@ export default function Login() {
                         <button
                           type="button"
                           onClick={() => setShowForgot(true)}
-                          className="text-[var(--accent-primary)] text-sm hover:text-[var(--accent-hover)] transition-colors"
+                          className="font-extrabold text-[var(--accent-secondary)] text-sm hover:text-[var(--accent-hover)] transition-colors "
                         >
                           Forgot password?
                         </button>
@@ -578,7 +578,7 @@ export default function Login() {
                     <div className="text-center">
                       <Link
                         to="/signup"
-                        className="inline-flex items-center gap-2 px-6 py-3 border-2 border-[var(--accent-primary)] text-[var(--accent-primary)] hover:bg-[var(--accent-primary)] hover:text-white transition-all duration-300 rounded-xl font-medium"
+                        className="inline-flex items-center gap-2 px-6 py-3 border-2 border-[var(--accent-primary)] text-[var(--accent-secondary)] hover:bg-[var(--accent-primary)] hover:text-white transition-all duration-300 rounded-xl font-medium"
                       >
                         <span>Create New Account</span>
                         <span className="text-lg">→</span>
@@ -591,14 +591,14 @@ export default function Login() {
                   By signing in, you agree to our{" "}
                   <a
                     href="#"
-                    className="text-[var(--accent-primary)] hover:underline"
+                    className="text-[var(--accent-secondary)] hover:underline"
                   >
                     Terms of Service
                   </a>{" "}
                   and{" "}
                   <a
                     href="#"
-                    className="text-[var(--accent-primary)] hover:underline"
+                    className="text-[var(--accent-secondary)] hover:underline"
                   >
                     Privacy Policy
                   </a>
