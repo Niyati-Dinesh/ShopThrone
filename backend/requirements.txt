@@ -26,7 +26,7 @@ webdriver-manager==4.0.1
 # AI & Image Processing
 #transformers==4.36.0
 #torch
-pillow==10.1.0
+#pillow==10.1.0
 
 # Email & Notifications
 email-validator==2.1.0
