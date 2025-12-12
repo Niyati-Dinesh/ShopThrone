@@ -1847,6 +1847,10 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 
 # ==================== APPLICATION STARTUP ====================
+@app.get("/health", tags=["Health"])
+async def health():
+    """Health check for monitoring / deployment checks."""
+    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
 
 if __name__ == "__main__":
     import uvicorn
