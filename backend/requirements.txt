@@ -29,7 +29,6 @@ torch
 pillow==10.1.0
 
 # Email & Notifications
-smtplib  # Built-in Python, no version needed
 email-validator==2.1.0
 
 # Utilities
