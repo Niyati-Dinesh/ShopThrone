@@ -48,7 +48,6 @@ The standout feature is the **AI Visual Search**, integrated using a **Vision Tr
 
 ## 📸 Screenshots
 
-*(Add screenshots of your Landing Page, Search Results, and Admin Dashboard here)*
 
 | Landing Page | How it Works |
 | :---: | :---: |
